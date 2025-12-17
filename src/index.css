@@ -5,6 +5,18 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-50 text-slate-900;
+  min-height: 100vh;
+  color: #0f172a;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+
+  /* Soft pastel gradient background */
+  background: linear-gradient(
+    90deg,
+    #f6f2ff 0%,
+    #fdf7f2 30%,
+    #f1f9ff 60%,
+    #eef6f3 100%
+  );
+
+  background-attachment: fixed;
 }
