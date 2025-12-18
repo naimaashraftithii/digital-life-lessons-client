@@ -1,27 +1,50 @@
 import { createBrowserRouter } from "react-router-dom";
+
+// Layouts
 import MainLayout from "../layouts/MainLayout";
 import AuthLayout from "../layouts/AuthLayout";
 import DashboardLayout from "../layouts/DashboardLayout";
 
+// Pages
 import Home from "../pages/Home/Home";
 import PublicLessons from "../pages/PublicLessons/PublicLessons";
+import LessonDetails from "../pages/LessonDetails/LessonDetails";
+import NotFound from "../pages/Error/NotFound";
+
+// Auth pages
 import Login from "../pages/Auth/Login/Login";
 import Register from "../pages/Auth/Register/Register";
-import NotFound from "../pages/Error/NotFound";
-import LessonDetails from "../pages/LessonDetails/LessonDetails";
+
+// Dashboard pages
+import DashboardHome from "../pages/Dashboard/DashboardHome";
+import AddLesson from "../pages/Dashboard/AddLesson";
+import MyLessons from "../pages/Dashboard/MyLessons";
+import MyFavorites from "../pages/Dashboard/MyFavorites";
+
+// Route guards
 import PrivateRoute from "./PrivateRoute";
 
 const router = createBrowserRouter([
-  // Main website routes (Navbar+Footer থাকবে)
+  /* ================= MAIN WEBSITE ================= */
   {
     path: "/",
     element: <MainLayout />,
-    errorElement: <NotFound />, // ✅ any wrong url shows NotFound
+    errorElement: <NotFound />,
     children: [
       { index: true, element: <Home /> },
       { path: "public-lessons", element: <PublicLessons /> },
 
-      // Dashboard (Protected)
+      /* -------- Lesson Details (Protected) -------- */
+      {
+        path: "lesson/:id",
+        element: (
+          <PrivateRoute>
+            <LessonDetails />
+          </PrivateRoute>
+        ),
+      },
+
+      /* ================= DASHBOARD ================= */
       {
         path: "dashboard",
         element: (
@@ -30,15 +53,16 @@ const router = createBrowserRouter([
           </PrivateRoute>
         ),
         children: [
-          { index: true, element: <div>Dashboard Home</div> },
-          { path: "add-lesson", element: <div>Add Lesson</div> },
-          { path: "my-lessons", element: <div>My Lessons</div> },
+          { index: true, element: <DashboardHome /> },
+          { path: "add-lesson", element: <AddLesson /> },
+          { path: "my-lessons", element: <MyLessons /> },
+          { path: "my-favorites", element: <MyFavorites /> },
         ],
       },
     ],
   },
 
-  // Auth routes (Navbar+Footer থাকবে না)
+  /* ================= AUTH PAGES ================= */
   {
     path: "/",
     element: <AuthLayout />,
@@ -47,17 +71,6 @@ const router = createBrowserRouter([
       { path: "register", element: <Register /> },
     ],
   },
-  
-  { path: "public-lessons", element: <PublicLessons /> },
-
-{
-  path: "lesson/:id",
-  element: (
-    <PrivateRoute>
-      <LessonDetails />
-    </PrivateRoute>
-  ),
-},
 ]);
 
 export default router;
