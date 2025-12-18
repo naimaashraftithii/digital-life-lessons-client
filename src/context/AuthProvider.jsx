@@ -10,7 +10,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { app } from "../firebase/firebase.config";
-import { AuthContext } from "../context/AuthContext";
+import { AuthContext } from "./AuthContext";
 
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
@@ -19,26 +19,48 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const createUser = (email, password) =>
-    createUserWithEmailAndPassword(auth, email, password);
+  // Register (Email/Password)
+  const createUser = async (email, password) => {
+    setLoading(true);
+    return createUserWithEmailAndPassword(auth, email, password);
+  };
 
-  const signIn = (email, password) =>
-    signInWithEmailAndPassword(auth, email, password);
+  // ✅ Login (Email/Password)
+  const signIn = async (email, password) => {
+    setLoading(true);
+    return signInWithEmailAndPassword(auth, email, password);
+  };
 
-  const googleSignIn = () => signInWithPopup(auth, googleProvider);
+  //  Google Login
+  const googleSignIn = async () => {
+    setLoading(true);
+    return signInWithPopup(auth, googleProvider);
+  };
 
-  const logOut = () => signOut(auth);
+  //  Logout
+  const logOut = async () => {
+    setLoading(true);
+    return signOut(auth);
+  };
 
+  //  Update profile
   const updateUserProfile = (name, photoURL) =>
     updateProfile(auth.currentUser, { displayName: name, photoURL });
 
   useEffect(() => {
+    //  fallback (reduce loader time)
+    const timer = setTimeout(() => setLoading(false), 600);
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
+      clearTimeout(timer);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
   const authInfo = {
@@ -51,9 +73,7 @@ const AuthProvider = ({ children }) => {
     updateUserProfile,
   };
 
-  return (
-    <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>;
 };
 
 export default AuthProvider;

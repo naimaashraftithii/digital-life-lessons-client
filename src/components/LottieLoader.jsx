@@ -1,17 +1,26 @@
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import Lottie from "lottie-react";
-import loadingAnim from "../assets/Sandy Loading.json"; // তোমার loading json
+import loadingAnim from "../assets/Sandy Loading.json";
 
 const LottieLoader = () => {
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur">
-      <div className="w-40">
-        <Lottie animationData={loadingAnim} loop={true} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/35 backdrop-blur">
+      <div className="flex flex-col items-center">
+        {/* Bigger Lottie */}
+        <div className="w-40 sm:w-52">
+          <Lottie animationData={loadingAnim} loop />
+        </div>
+
+        {/* Animated Text */}
+        <h1 className="mt-2 text-center text-3xl sm:text-4xl font-extrabold text-neutral-900 tracking-wide animate-bounce">
+          Loading<span className="animate-pulse">....!!!</span>
+        </h1>
+
+        <p className="mt-1 text-xs sm:text-sm text-slate-600 animate-pulse">
+          Please wait a moment
+        </p>
       </div>
     </div>
   );
 };
-
-
 
 export default LottieLoader;

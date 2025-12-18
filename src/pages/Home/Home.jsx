@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-
+import LottieLoader from "../../components/LottieLoader";
 const Home = () => {
   return (
     <div className="bg-slate-50">
+      
       {/* HERO (bg + image) */}
       <section className="bg-gradient-to-b from-indigo-50 via-white to-slate-50">
         <div className="mx-auto max-w-6xl px-4 py-10 md:py-14">
