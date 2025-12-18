@@ -1,0 +1,36 @@
+[
+  {
+    "_id": "l1",
+    "title": "Small habits create big change",
+    "description": "Tiny actions repeated daily reshape your mindset and life. This lesson explains how consistency beats motivation.",
+    "category": "Personal Growth",
+    "emotionalTone": "Motivational",
+    "accessLevel": "free",
+    "visibility": "public",
+    "creator": {
+      "name": "Sarah Ahmed",
+      "photo": "https://i.pravatar.cc/150?img=32"
+    },
+    "createdAt": "2024-12-10",
+    "updatedAt": "2024-12-12",
+    "likesCount": 12,
+    "favoritesCount": 5
+  },
+  {
+    "_id": "l2",
+    "title": "Boundaries protect your peace",
+    "description": "Learning to say no is a form of self-respect. This lesson dives into emotional boundaries and clarity.",
+    "category": "Relationships",
+    "emotionalTone": "Realization",
+    "accessLevel": "premium",
+    "visibility": "public",
+    "creator": {
+      "name": "Arafat Khan",
+      "photo": "https://i.pravatar.cc/150?img=12"
+    },
+    "createdAt": "2024-12-05",
+    "updatedAt": "2024-12-05",
+    "likesCount": 48,
+    "favoritesCount": 21
+  }
+]

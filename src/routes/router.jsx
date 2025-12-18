@@ -8,7 +8,7 @@ import PublicLessons from "../pages/PublicLessons/PublicLessons";
 import Login from "../pages/Auth/Login/Login";
 import Register from "../pages/Auth/Register/Register";
 import NotFound from "../pages/Error/NotFound";
-
+import LessonDetails from "../pages/LessonDetails/LessonDetails";
 import PrivateRoute from "./PrivateRoute";
 
 const router = createBrowserRouter([
@@ -47,6 +47,17 @@ const router = createBrowserRouter([
       { path: "register", element: <Register /> },
     ],
   },
+  
+  { path: "public-lessons", element: <PublicLessons /> },
+
+{
+  path: "lesson/:id",
+  element: (
+    <PrivateRoute>
+      <LessonDetails />
+    </PrivateRoute>
+  ),
+},
 ]);
 
 export default router;
