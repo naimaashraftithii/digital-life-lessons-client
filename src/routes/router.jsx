@@ -23,6 +23,7 @@ import MyFavorites from "../pages/Dashboard/MyFavorites";
 
 // Route guards
 import PrivateRoute from "./PrivateRoute";
+import Profile from "../pages/Dashboard/Profile";
 
 const router = createBrowserRouter([
   /* ================= MAIN WEBSITE ================= */
@@ -57,6 +58,7 @@ const router = createBrowserRouter([
           { path: "add-lesson", element: <AddLesson /> },
           { path: "my-lessons", element: <MyLessons /> },
           { path: "my-favorites", element: <MyFavorites /> },
+          { path: "profile", element: <Profile /> },
         ],
       },
     ],
