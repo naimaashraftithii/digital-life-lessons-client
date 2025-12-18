@@ -64,6 +64,11 @@ const Home = () => {
         </div>
       </section>
       <HeroSlider />
+      {/* Featured slider like screenshot */}
+      <FeaturedLessonsCarousel />
+
+      {/* Pricing teaser cards like screenshot */}
+      <PricingTeaser />
       <FeaturedLessons />
       <WhyLifeMatters />
       
