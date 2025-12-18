@@ -1,8 +1,13 @@
 import { Link } from "react-router-dom";
 import LottieLoader from "../../components/LottieLoader";
+import HeroSlider from "./sections/HeroSlider";
+import FeaturedLessons from "./sections/FeaturedLessons";
+import WhyLifeMatters from "./sections/WhyLifeMatters";
+import TopContributors from "./sections/TopContributors";
+import MostSavedLessons from "./sections/MostSavedLessons";
 const Home = () => {
   return (
-    <div className="bg-slate-50">
+    <div className="bg-slate-50 w-full">
       
       {/* HERO (bg + image) */}
       <section className="bg-gradient-to-b from-indigo-50 via-white to-slate-50">
@@ -58,99 +63,15 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-      {/* FEATURED (dynamic later) */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-10">
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold text-slate-900">
-                Featured Life Lessons
-              </h2>
-              <p className="mt-2 text-sm text-slate-600">
-                Admin dashboard থেকে control হবে (later).
-              </p>
-            </div>
-            <Link to="/public-lessons" className="text-sm font-semibold text-primary">
-              View all →
-            </Link>
-          </div>
-
-          {/* cards placeholder */}
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                <p className="text-xs font-semibold text-slate-500">Motivational • Mindset</p>
-                <h3 className="mt-2 text-lg font-semibold text-slate-900">
-                  A small habit can change everything
-                </h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  Short preview of lesson content will appear here…
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* WHY IT MATTERS (benefit cards) */}
-      <section className="bg-slate-50">
-        <div className="mx-auto max-w-6xl px-4 py-10">
-          <h2 className="text-2xl font-semibold text-slate-900">
-            Why learning from life matters
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Simple reflection builds clarity, resilience, and growth.
-          </p>
-
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { title: "Remember better", desc: "Store lessons so you don’t forget." },
-              { title: "Grow faster", desc: "See patterns and improve decisions." },
-              { title: "Stay mindful", desc: "Reflect with intention and calm." },
-              { title: "Learn from others", desc: "Explore community wisdom." },
-            ].map((b) => (
-              <div key={b.title} className="rounded-2xl bg-white p-5 shadow-sm">
-                <h3 className="text-base font-semibold text-slate-900">{b.title}</h3>
-                <p className="mt-2 text-sm text-slate-600">{b.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* EXTRA SECTIONS (dynamic later) */}
-      <section className="bg-gradient-to-b from-amber-50 via-white to-white">
-        <div className="mx-auto max-w-6xl px-4 py-10">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-3xl bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-semibold text-slate-900">
-                Top contributors of the week
-              </h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Dynamic list will come from backend later.
-              </p>
-              <img
-                className="mt-4 h-40 w-full rounded-2xl object-cover"
-                src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=80"
-                alt="Top contributors"
-              />
-            </div>
-
-            <div className="rounded-3xl bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-semibold text-slate-900">Most saved lessons</h3>
-              <p className="mt-2 text-sm text-slate-600">
-                Sorted by favoritesCount later.
-              </p>
-              <img
-                className="mt-4 h-40 w-full rounded-2xl object-cover"
-                src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80"
-                alt="Most saved lessons"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      <HeroSlider />
+      <FeaturedLessons />
+      <WhyLifeMatters />
+      
+      
+      <div className="bg-white/30">
+        <TopContributors />
+        <MostSavedLessons />
+      </div>
     </div>
   );
 };
