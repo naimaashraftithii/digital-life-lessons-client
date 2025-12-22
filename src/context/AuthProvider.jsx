@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { upsertUser } from "../api/users";
 import {
   getAuth,
   onAuthStateChanged,
@@ -9,6 +10,7 @@ import {
   signOut,
   updateProfile,
 } from "firebase/auth";
+
 import { app } from "../firebase/firebase.config";
 import { AuthContext } from "./AuthContext";
 
@@ -20,60 +22,73 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Register (Email/Password)
-  const createUser = async (email, password) => {
+  const createUser = (email, password) => {
     setLoading(true);
     return createUserWithEmailAndPassword(auth, email, password);
   };
 
-  // ✅ Login (Email/Password)
-  const signIn = async (email, password) => {
+  // Login (Email/Password)
+  const signIn = (email, password) => {
     setLoading(true);
     return signInWithEmailAndPassword(auth, email, password);
   };
 
-  //  Google Login
-  const googleSignIn = async () => {
+  // Google login
+  const googleSignIn = () => {
     setLoading(true);
     return signInWithPopup(auth, googleProvider);
   };
 
-  //  Logout
-  const logOut = async () => {
+  // Logout
+  const logOut = () => {
     setLoading(true);
     return signOut(auth);
   };
 
-  //  Update profile
-  const updateUserProfile = (name, photoURL) =>
-    updateProfile(auth.currentUser, { displayName: name, photoURL });
-
-  useEffect(() => {
-    //  fallback (reduce loader time)
-    const timer = setTimeout(() => setLoading(false), 600);
-
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-      clearTimeout(timer);
-    });
-
-    return () => {
-      unsubscribe();
-      clearTimeout(timer);
-    };
-  }, []);
-
-  const authInfo = {
-    user,
-    loading,
-    createUser,
-    signIn,
-    googleSignIn,
-    logOut,
-    updateUserProfile,
+  // Update profile
+  const updateUserProfile = async (name, photoURL) => {
+    await updateProfile(auth.currentUser, { displayName: name, photoURL });
+    // keep local state in sync
+    setUser((prev) =>
+      prev ? { ...prev, displayName: name, photoURL } : prev
+    );
   };
 
-  return <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>;
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+
+      // ✅ Upsert user in MongoDB whenever logged in
+      if (currentUser?.uid && currentUser?.email) {
+        try {
+          await upsertUser(currentUser);
+        } catch (e) {
+          console.log("Upsert error:", e.message);
+        }
+      }
+
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const authInfo = useMemo(
+    () => ({
+      user,
+      loading,
+      createUser,
+      signIn,
+      googleSignIn,
+      logOut,
+      updateUserProfile,
+    }),
+    [user, loading]
+  );
+
+  return (
+    <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>
+  );
 };
 
 export default AuthProvider;

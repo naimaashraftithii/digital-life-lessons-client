@@ -1,119 +1,122 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import lessonsData from "../../data/lessons.json";
+import { Link, Navigate, useParams } from "react-router-dom";
 import LottieLoader from "../../components/LottieLoader";
 import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import { getLessonById } from "../../api/lessons";
 
-const PublicLessons = () => {
+const LessonDetails = () => {
+  const { id } = useParams();
   const { user } = useAuth();
-  const [lessons, setLessons] = useState([]);
+  const { plan, loading: planLoading } = useUserPlan(user?.uid);
+
+  const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
-    // mock API delay
-    const t = setTimeout(() => {
-      setLessons(lessonsData);
-      setLoading(false);
-    }, 300);
+    let ignore = false;
 
-    return () => clearTimeout(t);
-  }, []);
+    (async () => {
+      try {
+        setLoading(true);
+        setErr("");
+        const data = await getLessonById(id); // ✅ real API
+        if (!ignore) setLesson(data);
+      } catch (e) {
+        if (!ignore) setErr(e.message || "Failed to load lesson");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
 
-  if (loading) return <LottieLoader />;
+    return () => {
+      ignore = true;
+    };
+  }, [id]);
+
+  if (loading || planLoading) return <LottieLoader />;
+
+  if (err) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="max-w-md rounded-2xl bg-white p-6 shadow-sm text-center">
+          <h2 className="text-xl font-extrabold text-slate-900">Error</h2>
+          <p className="mt-2 text-sm text-slate-600">{err}</p>
+          <Link
+            to="/public-lessons"
+            className="mt-4 inline-block rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"
+          >
+            Back to lessons
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!lesson) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="max-w-md rounded-2xl bg-white p-6 shadow-sm text-center">
+          <h2 className="text-xl font-extrabold text-slate-900">Lesson not found</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            This lesson doesn’t exist or was removed.
+          </p>
+          <Link
+            to="/public-lessons"
+            className="mt-4 inline-block rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"
+          >
+            Back to lessons
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const locked = lesson.accessLevel === "premium" && !plan?.isPremium;
+
+  if (locked) {
+    return <Navigate to="/pricing" replace state={{ from: `/lesson/${id}` }} />;
+  }
 
   return (
-    <section className="bg-slate-50 min-h-screen">
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <h1 className="text-3xl font-extrabold text-slate-900">
-          Public Life Lessons
-        </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Explore wisdom shared by the community.
-        </p>
+    <section className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="text-2xl font-extrabold text-slate-900">{lesson.title}</h1>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+              {(lesson.accessLevel || "free").toUpperCase()}
+            </span>
+          </div>
 
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {lessons.map((lesson) => {
-            const isLocked =
-              lesson.accessLevel === "premium" && !user?.isPremium;
+          <p className="mt-3 text-slate-700">{lesson.description}</p>
 
-            return (
-              <div
-                key={lesson._id}
-                className="relative overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-              >
-                {/* Premium overlay */}
-                {isLocked && (
-                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur">
-                    <span className="text-2xl">🔒</span>
-                    <p className="mt-2 text-sm font-bold text-slate-800">
-                      Premium Lesson
-                    </p>
-                    <Link
-                      to="/pricing"
-                      className="mt-2 rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white"
-                    >
-                      Upgrade to view
-                    </Link>
-                  </div>
-                )}
+          <div className="mt-6 flex items-center gap-3">
+            <img
+              src={lesson?.creator?.photoURL || lesson?.creator?.photo || "https://i.ibb.co/ZxK3f6K/user.png"}
+              alt="creator"
+              className="h-10 w-10 rounded-full object-cover"
+            />
+            <div>
+              <p className="text-sm font-bold text-slate-900">
+                {lesson?.creator?.name || lesson?.creator?.displayName || "Unknown"}
+              </p>
+              <p className="text-xs text-slate-500">
+                {lesson.createdAt ? new Date(lesson.createdAt).toLocaleString() : ""}
+              </p>
+            </div>
+          </div>
 
-                <div className={isLocked ? "blur-sm" : ""}>
-                  <div className="p-5">
-                    <h3 className="text-lg font-bold text-slate-900">
-                      {lesson.title}
-                    </h3>
-
-                    <p className="mt-2 text-sm text-slate-600 line-clamp-3">
-                      {lesson.description}
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap gap-2 text-xs">
-                      <span className="rounded-full bg-indigo-100 px-2 py-1 font-semibold text-indigo-700">
-                        {lesson.category}
-                      </span>
-                      <span className="rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-700">
-                        {lesson.emotionalTone}
-                      </span>
-                      <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-600">
-                        {lesson.accessLevel.toUpperCase()}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 flex items-center gap-3">
-                      <img
-                        src={lesson.creator.photo}
-                        alt={lesson.creator.name}
-                        className="h-8 w-8 rounded-full"
-                      />
-                      <div>
-                        <p className="text-xs font-semibold text-slate-800">
-                          {lesson.creator.name}
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          {lesson.createdAt}
-                        </p>
-                      </div>
-                    </div>
-
-                    {!isLocked && (
-                      <div className="mt-4">
-                        <Link
-                          to={`/lesson/${lesson._id}`}
-                          className="text-sm font-bold text-primary hover:underline"
-                        >
-                          See details →
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          <div className="mt-6">
+            <Link to="/public-lessons" className="text-sm font-bold text-primary hover:underline">
+              ← Back
+            </Link>
+          </div>
         </div>
       </div>
     </section>
   );
 };
 
-export default PublicLessons;
+export default LessonDetails;

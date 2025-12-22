@@ -1,67 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import useAuth from "../../hooks/useAuth";
+import useDashboardSummary from "../../hooks/useDashboardSummary";
 import GradientButton from "../../components/GradientButton";
 import LottieLoader from "../../components/LottieLoader";
 
-// ✅ TEMP (until backend):
-// Replace these with API data later
-const MOCK_LESSONS = [
-  {
-    _id: "l1",
-    title: "Consistency beats motivation",
-    description:
-      "Motivation comes and goes—systems keep you moving forward. My key takeaway: show up even when you don’t feel like it...",
-    category: "Mindset",
-    tone: "Motivational",
-    creatorEmail: "demo@mail.com",
-    creatorName: "Demo User",
-    creatorPhoto: "https://i.ibb.co/ZxK3f6K/user.png",
-    visibility: "public",
-    accessLevel: "free",
-    createdAt: "2025-12-10T10:20:00Z",
-    likesCount: 120,
-    favoritesCount: 45,
-  },
-  {
-    _id: "l2",
-    title: "Boundaries are self-respect",
-    description:
-      "Saying no with kindness protects your peace. I learned to say no without guilt, and it changed my mental health...",
-    category: "Relationships",
-    tone: "Realization",
-    creatorEmail: "demo@mail.com",
-    creatorName: "Demo User",
-    creatorPhoto: "https://i.ibb.co/ZxK3f6K/user.png",
-    visibility: "public",
-    accessLevel: "premium",
-    createdAt: "2025-12-13T13:10:00Z",
-    likesCount: 340,
-    favoritesCount: 98,
-  },
-  {
-    _id: "l3",
-    title: "A mistake is data, not identity",
-    description:
-      "I used to label myself by failures. Now I treat mistakes like feedback—something to learn from, not something to live under...",
-    category: "Personal Growth",
-    tone: "Gratitude",
-    creatorEmail: "demo@mail.com",
-    creatorName: "Demo User",
-    creatorPhoto: "https://i.ibb.co/ZxK3f6K/user.png",
-    visibility: "public",
-    accessLevel: "free",
-    createdAt: "2025-12-15T09:00:00Z",
-    likesCount: 220,
-    favoritesCount: 60,
-  },
-];
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
+const API = import.meta.env.VITE_API_URL;
 
 const StatCard = ({ label, value, pill }) => (
   <div className="rounded-2xl bg-white/70 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-lg">
@@ -74,18 +18,14 @@ const StatCard = ({ label, value, pill }) => (
 );
 
 const LessonCard = ({ lesson }) => {
-  const created = new Date(lesson.createdAt).toLocaleDateString();
+  const created = lesson?.createdAt ? new Date(lesson.createdAt).toLocaleDateString() : "";
 
   return (
     <div className="group relative overflow-hidden rounded-3xl bg-white/70 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:shadow-xl">
-      <div className="absolute inset-0 opacity-0 transition group-hover:opacity-100">
-        <div className="h-full w-full bg-gradient-to-br from-white/0 via-white/0 to-white/40" />
-      </div>
-
       <div className="relative p-5">
         <div className="flex items-center justify-between gap-2">
           <span className="rounded-xl bg-slate-900 px-2.5 py-1 text-[10px] font-extrabold tracking-widest text-white">
-            {lesson.accessLevel.toUpperCase()}
+            {(lesson.accessLevel || "free").toUpperCase()}
           </span>
           <span className="text-xs font-semibold text-slate-500">{created}</span>
         </div>
@@ -100,31 +40,34 @@ const LessonCard = ({ lesson }) => {
 
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">
-            {lesson.category}
+            {lesson.category || "General"}
           </span>
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-            {lesson.tone}
+            {lesson.tone || lesson.emotionalTone || "Neutral"}
           </span>
         </div>
 
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src={lesson.creatorPhoto}
+              src={lesson?.creator?.photo || "https://i.ibb.co/ZxK3f6K/user.png"}
               alt="creator"
               className="h-9 w-9 rounded-2xl object-cover"
             />
             <div className="leading-tight">
               <p className="text-sm font-bold text-slate-900">
-                {lesson.creatorName}
+                {lesson?.creator?.name || "You"}
               </p>
               <p className="text-xs font-semibold text-slate-500">
-                ❤️ {lesson.likesCount} • 🔖 {lesson.favoritesCount}
+                ❤️ {lesson.likesCount || 0} • 🔖 {lesson.favoritesCount || 0}
               </p>
             </div>
           </div>
 
-          <Link to={`/lesson/${lesson._id}`} className="text-sm font-extrabold text-primary hover:underline">
+          <Link
+            to={`/lesson/${lesson._id}`}
+            className="text-sm font-extrabold text-primary hover:underline"
+          >
             See details →
           </Link>
         </div>
@@ -133,38 +76,21 @@ const LessonCard = ({ lesson }) => {
   );
 };
 
-const OfferCard = ({ title, price, points, variant, to }) => (
-  <div className="rounded-3xl bg-white/70 p-6 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:shadow-xl">
-    <h4 className="text-sm font-extrabold tracking-widest text-slate-600">
-      {title}
-    </h4>
-    <p className="mt-2 text-4xl font-extrabold text-slate-900">{price}</p>
-
-    <ul className="mt-4 space-y-2 text-sm text-slate-700">
-      {points.map((p) => (
-        <li key={p} className="flex items-start gap-2">
-          <span className="mt-2 h-2 w-2 rounded-full bg-slate-900" />
-          <span className="font-semibold">{p}</span>
-        </li>
-      ))}
-    </ul>
-
-    <div className="mt-6">
-      <Link to={to}>
-        <GradientButton variant={variant} className="w-full">
-          Upgrade now
-        </GradientButton>
-      </Link>
-    </div>
-  </div>
-);
-
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, loading, updateUserProfile } = useAuth();
+  const { user, loading: authLoading, updateUserProfile } = useAuth();
 
-  // ✅ Later: fetch from MongoDB: isPremium + favoritesCount + lessonCount
-  const [isPremium] = useState(false);
+  const { data, loading, error } = useDashboardSummary(user?.uid);
+
+  const isPremium = !!data?.user?.isPremium;
+
+  const counts = useMemo(() => {
+    return {
+      lessonsCreated: data?.counts?.publicLessons ?? 0,
+      totalLikes: data?.counts?.likes ?? 0,
+      totalSaved: data?.counts?.favorites ?? 0,
+    };
+  }, [data]);
 
   // Edit form
   const [editing, setEditing] = useState(false);
@@ -172,26 +98,47 @@ const Profile = () => {
   const [photo, setPhoto] = useState(user?.photoURL || "");
   const [saving, setSaving] = useState(false);
 
-  // ✅ Replace with API call later
-  const userPublicLessons = useMemo(() => {
-    const email = user?.email;
-    if (!email) return [];
-    return MOCK_LESSONS
-      .filter((l) => l.creatorEmail === email && l.visibility === "public")
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [user?.email]);
-
-  const stats = useMemo(() => {
-    const lessonsCreated = userPublicLessons.length; // only public in mock
-    const totalLikes = userPublicLessons.reduce((sum, l) => sum + (l.likesCount || 0), 0);
-    const totalSaved = userPublicLessons.reduce((sum, l) => sum + (l.favoritesCount || 0), 0);
-    return { lessonsCreated, totalLikes, totalSaved };
-  }, [userPublicLessons]);
+  // Your public lessons list (dynamic)
+  const [myPublicLessons, setMyPublicLessons] = useState([]);
+  const [lessonsLoading, setLessonsLoading] = useState(true);
 
   useEffect(() => {
     setName(user?.displayName || "");
     setPhoto(user?.photoURL || "");
   }, [user?.displayName, user?.photoURL]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setMyPublicLessons([]);
+      setLessonsLoading(false);
+      return;
+    }
+
+    let ignore = false;
+
+    (async () => {
+      try {
+        setLessonsLoading(true);
+        const res = await fetch(`${API}/lessons/my?uid=${user.uid}`);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.message || "Failed to load your lessons");
+
+        const onlyPublic = (Array.isArray(json) ? json : [])
+          .filter((l) => l.visibility === "public")
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (!ignore) setMyPublicLessons(onlyPublic);
+      } catch {
+        if (!ignore) setMyPublicLessons([]);
+      } finally {
+        if (!ignore) setLessonsLoading(false);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, [user?.uid]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -204,24 +151,30 @@ const Profile = () => {
     }
   };
 
-  if (loading) return <LottieLoader />;
+  if (authLoading || loading) return <LottieLoader />;
+
+  // If backend says "User not found", show a clear message (upsert fixes it)
+  if (error) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] w-full px-4 py-6">
+        <div className="mx-auto max-w-4xl rounded-2xl bg-red-50 p-6 text-sm font-semibold text-red-700">
+          {error}
+          <p className="mt-2 text-xs font-bold text-red-800">
+            If it says “User not found”, logout → login again (upsert runs on login).
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-80px)] w-full px-4 py-6">
-      {/* Page background wrapper (soft gradient layer) */}
       <div className="mx-auto max-w-6xl">
-        {/* HEADER CARD (like your screenshot) */}
-        <motion.section
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="relative overflow-hidden rounded-[32px] bg-white/70 shadow-sm backdrop-blur"
-        >
-          {/* top glow */}
+        {/* HEADER CARD */}
+        <section className="relative overflow-hidden rounded-[32px] bg-white/70 shadow-sm backdrop-blur">
           <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-indigo-200/60 via-fuchsia-200/50 to-sky-200/60" />
 
           <div className="relative grid gap-6 p-6 md:grid-cols-[220px_1fr] md:items-center">
-            {/* avatar */}
             <div className="flex justify-center md:justify-start">
               <img
                 src={user?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
@@ -230,12 +183,11 @@ const Profile = () => {
               />
             </div>
 
-            {/* info + stats */}
             <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-extrabold text-slate-900 md:text-3xl">
-                    {user?.displayName || "Anonymous User"}
+                    {data?.user?.name || user?.displayName || "Anonymous User"}
                   </h1>
 
                   {isPremium ? (
@@ -250,14 +202,12 @@ const Profile = () => {
                 </div>
 
                 <p className="mt-1 text-sm font-semibold text-slate-600">
-                  {user?.email}
+                  {data?.user?.email || user?.email}
                 </p>
 
                 <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                   <Link to="/dashboard/add-lesson">
-                    <GradientButton variant="bluePink">
-                      + Add Lesson
-                    </GradientButton>
+                    <GradientButton variant="bluePink">+ Add Lesson</GradientButton>
                   </Link>
 
                   <button
@@ -330,36 +280,31 @@ const Profile = () => {
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Lessons</p>
                   <p className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {stats.lessonsCreated}
+                    {counts.lessonsCreated}
                   </p>
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Saved</p>
                   <p className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {stats.totalSaved}
+                    {counts.totalSaved}
                   </p>
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Likes</p>
                   <p className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {stats.totalLikes}
+                    {counts.totalLikes}
                   </p>
                 </div>
               </div>
             </div>
           </div>
-        </motion.section>
+        </section>
 
         {/* STATS ROW */}
-        <motion.section
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        >
+        <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
             label="TOTAL PUBLIC LESSONS"
-            value={stats.lessonsCreated}
+            value={counts.lessonsCreated}
             pill={
               <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-extrabold text-indigo-700">
                 Newest first
@@ -368,7 +313,7 @@ const Profile = () => {
           />
           <StatCard
             label="TOTAL SAVED (FAVORITES)"
-            value={stats.totalSaved}
+            value={counts.totalSaved}
             pill={
               <Link
                 to="/dashboard/my-favorites"
@@ -396,66 +341,10 @@ const Profile = () => {
               )
             }
           />
-        </motion.section>
-
-        {/* FREE USER OFFERS */}
-        {!isPremium && (
-          <motion.section
-            variants={fadeUp}
-            initial="hidden"
-            animate="show"
-            className="mt-6 rounded-[32px] bg-white/50 p-6 shadow-sm backdrop-blur"
-          >
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900">
-                  Upgrade offers for you
-                </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-600">
-                  Lifetime access unlocks Premium lessons & creation.
-                </p>
-              </div>
-              <Link to="/pricing" className="text-sm font-extrabold text-primary hover:underline">
-                See full comparison →
-              </Link>
-            </div>
-
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
-              <OfferCard
-                title="LIFETIME PREMIUM"
-                price="৳1500"
-                variant="pinkRed"
-                to="/pricing"
-                points={[
-                  "One-time payment, lifetime access",
-                  "View Premium public lessons",
-                  "Create Premium lessons",
-                  "Premium lock / blur support",
-                ]}
-              />
-              <OfferCard
-                title="PREMIUM BENEFITS"
-                price="⭐"
-                variant="bluePink"
-                to="/pricing"
-                points={[
-                  "Ad-free experience (later)",
-                  "Priority listing (later)",
-                  "Advanced filters (later)",
-                  "Support & feature requests",
-                ]}
-              />
-            </div>
-          </motion.section>
-        )}
+        </section>
 
         {/* USER PUBLIC LESSONS */}
-        <motion.section
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="mt-6"
-        >
+        <section className="mt-6">
           <div className="rounded-[32px] bg-white/50 p-6 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -463,7 +352,7 @@ const Profile = () => {
                   Your public lessons
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-slate-600">
-                  Same card style as public lessons page (newest first).
+                  Loaded from MongoDB (newest first).
                 </p>
               </div>
 
@@ -472,7 +361,11 @@ const Profile = () => {
               </Link>
             </div>
 
-            {userPublicLessons.length === 0 ? (
+            {lessonsLoading ? (
+              <div className="mt-6">
+                <LottieLoader />
+              </div>
+            ) : myPublicLessons.length === 0 ? (
               <div className="mt-6 rounded-3xl bg-white p-6 text-center shadow-sm">
                 <p className="text-lg font-extrabold text-slate-900">
                   No public lessons yet
@@ -488,13 +381,13 @@ const Profile = () => {
               </div>
             ) : (
               <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {userPublicLessons.map((lesson) => (
+                {myPublicLessons.map((lesson) => (
                   <LessonCard key={lesson._id} lesson={lesson} />
                 ))}
               </div>
             )}
           </div>
-        </motion.section>
+        </section>
       </div>
     </div>
   );

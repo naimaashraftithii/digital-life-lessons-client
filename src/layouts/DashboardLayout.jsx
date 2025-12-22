@@ -2,11 +2,17 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import useAuth from "../hooks/useAuth";
+import useUserPlan from "../hooks/useUserPlan";
 import GradientButton from "../components/GradientButton";
+import LottieLoader from "../components/LottieLoader";
 
 const navClass = ({ isActive }) =>
-  `flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-extrabold transition
-   ${isActive ? "bg-white/80 text-slate-900 shadow-sm" : "text-slate-700 hover:bg-white/60"}`;
+  `group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-extrabold
+   transition-all duration-200
+   ${isActive
+     ? "bg-white/90 text-slate-900 shadow-sm"
+     : "text-slate-700 hover:bg-white/70 hover:shadow-sm hover:-translate-y-[1px]"
+   }`;
 
 const Sidebar = ({
   user,
@@ -91,7 +97,7 @@ const Sidebar = ({
           <NavLink
             key={m.to}
             to={m.to}
-            className={navClass}
+            className={navClass} // ✅ USED HERE
             onClick={() => mobile && onClose?.()}
           >
             <span className="text-lg">{m.icon}</span>
@@ -136,9 +142,9 @@ const DashboardLayout = () => {
   const { user, logOut } = useAuth();
   const navigate = useNavigate();
 
-  // ✅ Later: fetch from MongoDB (single source of truth)
-  const [isAdmin] = useState(false);
-  const [isPremium] = useState(false);
+  const { plan, loading } = useUserPlan(user?.uid);
+  const isPremium = !!plan?.isPremium;
+  const isAdmin = plan?.role === "admin";
 
   const [open, setOpen] = useState(false);
 
@@ -155,7 +161,7 @@ const DashboardLayout = () => {
       { to: "/dashboard", label: "Dashboard Home", icon: "📊" },
       { to: "/dashboard/add-lesson", label: "Add Lesson", icon: "➕" },
       { to: "/dashboard/my-lessons", label: "My Lessons", icon: "📚" },
-      { to: "/dashboard/my-favorites", label: "My Favorites", icon: "🔖" },
+      { to: "/dashboard/my-favorites", label: "My Favorites", icon: "❤" },
       { to: "/dashboard/profile", label: "Profile", icon: "👤" },
     ];
 
@@ -164,7 +170,7 @@ const DashboardLayout = () => {
       { to: "/dashboard/admin/manage-users", label: "Manage Users", icon: "👥" },
       { to: "/dashboard/admin/manage-lessons", label: "Manage Lessons", icon: "🧾" },
       { to: "/dashboard/admin/reported-lessons", label: "Reported Lessons", icon: "🚩" },
-      { to: "/dashboard/admin/profile", label: "Admin Profile", icon: "🧑‍💻" },
+      { to: "/dashboard/admin/profile", label: "Admin Profile", icon: "🧑" },
     ];
 
     return isAdmin ? adminMenu : userMenu;
@@ -174,6 +180,21 @@ const DashboardLayout = () => {
     await logOut();
     navigate("/");
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen w-full bg-[linear-gradient(90deg,#f6f2ff_0%,#fdf7f2_30%,#f1f9ff_60%,#eef6f3_100%)]">
+        <div className="mx-auto max-w-7xl px-4 py-10">
+          <div className="rounded-4xl bg-white/40 p-8 shadow-sm backdrop-blur">
+            <p className="text-sm font-extrabold text-slate-700">
+              <LottieLoader />
+              Loading dashboard...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full bg-[linear-gradient(90deg,#f6f2ff_0%,#fdf7f2_30%,#f1f9ff_60%,#eef6f3_100%)]">

@@ -8,7 +8,15 @@ const PrivateRoute = ({ children }) => {
 
   if (loading) return <LottieLoader />;
 
-  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname }}
+      />
+    );
+  }
 
   return children;
 };

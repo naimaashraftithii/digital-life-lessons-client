@@ -33,7 +33,7 @@ const slides = [
       "https://www.w3schools.com/html/mov_bbb.mp4",
     image:
       "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1600&q=80",
-    cta1: { text: "Pricing / Upgrade", to: "/pricing", variant: "pinkRed" },
+    cta1: { text: "UpgradePricing", to: "/pricing", variant: "pinkRed" },
     cta2: { text: "My Lessons", to: "/dashboard/my-lessons", variant: "bluePink" },
   },
 ];
@@ -54,7 +54,8 @@ const HeroSlider = () => {
                 <div className="grid gap-8 p-5 md:grid-cols-2 md:items-center md:p-10">
                   {/* LEFT */}
                   <div>
-                    <span className="inline-flex rounded-full bg-white/70 px-3 py-1 text-xs font-bold text-slate-800">
+
+                    <span className="inline-flex rounded-full bg-white/70 px-3 py-1 text-xs font-bold text-indigo-700">
                       {s.badge}
                     </span>
 

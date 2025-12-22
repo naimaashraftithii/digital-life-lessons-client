@@ -2,17 +2,18 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import useAuth from "../hooks/useAuth";
+import useUserPlan from "../hooks/useUserPlan";
 import GradientButton from "./GradientButton";
 
 const Navbar = () => {
   const { user, logOut } = useAuth();
   const navigate = useNavigate();
 
+  const { plan } = useUserPlan(user?.uid);
+  const isPremium = !!plan?.isPremium;
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [dropOpen, setDropOpen] = useState(false);
-
-  // TODO: Later MongoDB থেকে user info আনলে isPremium true/false set করবে
-  const isPremium = false;
 
   const dropdownRef = useRef(null);
 
@@ -23,7 +24,6 @@ const Navbar = () => {
         : "text-slate-700 hover:bg-white/50"
     }`;
 
-  // Dropdown বাইরে ক্লিক করলে বন্ধ
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -48,11 +48,7 @@ const Navbar = () => {
 
   const renderNavItems = () => (
     <>
-      <NavLink
-        to="/"
-        className={navLinkClass}
-        onClick={() => setMobileOpen(false)}
-      >
+      <NavLink to="/" className={navLinkClass} onClick={() => setMobileOpen(false)}>
         Home
       </NavLink>
 
@@ -64,38 +60,40 @@ const Navbar = () => {
         Public Lessons
       </NavLink>
 
-      {/* Protected routes: route নিজে PrivateRoute দিয়ে protect থাকবে */}
-      <NavLink
-        to="/dashboard/add-lesson"
-        className={navLinkClass}
-        onClick={() => setMobileOpen(false)}
-      >
-        Add Lesson
-      </NavLink>
+      {user && (
+        <>
+          <NavLink
+            to="/dashboard/add-lesson"
+            className={navLinkClass}
+            onClick={() => setMobileOpen(false)}
+          >
+            Add Lesson
+          </NavLink>
 
-      <NavLink
-        to="/dashboard/my-lessons"
-        className={navLinkClass}
-        onClick={() => setMobileOpen(false)}
-      >
-        My Lessons
-      </NavLink>
+          <NavLink
+            to="/dashboard/my-lessons"
+            className={navLinkClass}
+            onClick={() => setMobileOpen(false)}
+          >
+            My Lessons
+          </NavLink>
 
-      {/* Pricing only visible for logged-in Free user */}
-      {user && !isPremium && (
-        <NavLink
-          to="/pricing"
-          className={navLinkClass}
-          onClick={() => setMobileOpen(false)}
-        >
-          Pricing / Upgrade
-        </NavLink>
-      )}
+          {!isPremium && (
+            <NavLink
+              to="/pricing"
+              className={navLinkClass}
+              onClick={() => setMobileOpen(false)}
+            >
+              Pricing
+            </NavLink>
+          )}
 
-      {user && isPremium && (
-        <span className="rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-700">
-          Premium ⭐
-        </span>
+          {isPremium && (
+            <span className="rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-700">
+              Premium ⭐
+            </span>
+          )}
+        </>
       )}
     </>
   );
@@ -103,31 +101,19 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-50 border-b border-white/30 bg-white/30 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        {/* Logo */}
-        <Link
-          to="/"
-          className="flex items-center gap-2"
-          onClick={() => setMobileOpen(false)}
-        >
+        <Link to="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/70 text-slate-900 font-extrabold shadow-sm">
             DL
           </div>
           <div className="leading-tight">
-            <p className="text-base font-bold text-slate-900">
-              Digital Life Lessons
-            </p>
+            <p className="text-base font-bold text-slate-900">Digital Life Lessons</p>
             <p className="text-xs text-slate-600">Capture. Reflect. Grow.</p>
           </div>
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-1 md:flex">
-          {renderNavItems()}
-        </nav>
+        <nav className="hidden items-center gap-1 md:flex">{renderNavItems()}</nav>
 
-        {/* Right side */}
         <div className="flex items-center gap-2">
-          {/* Logged out */}
           {!user && (
             <div className="hidden items-center gap-2 md:flex">
               <Link to="/login">
@@ -135,7 +121,6 @@ const Navbar = () => {
                   Login
                 </GradientButton>
               </Link>
-
               <Link to="/register">
                 <GradientButton variant="bluePink" className="px-4 py-2 text-sm">
                   Sign up
@@ -144,7 +129,6 @@ const Navbar = () => {
             </div>
           )}
 
-          {/* Logged in dropdown */}
           {user && (
             <div className="relative" ref={dropdownRef}>
               <button
@@ -189,6 +173,16 @@ const Navbar = () => {
                       Dashboard
                     </Link>
 
+                    {!isPremium && (
+                      <Link
+                        to="/pricing"
+                        onClick={() => setDropOpen(false)}
+                        className="mt-1 block rounded-xl px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
+                      >
+                        Upgrade
+                      </Link>
+                    )}
+
                     <button
                       onClick={handleLogout}
                       className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50"
@@ -201,7 +195,6 @@ const Navbar = () => {
             </div>
           )}
 
-          {/* Mobile menu toggle */}
           <button
             onClick={() => setMobileOpen((v) => !v)}
             className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 shadow-sm md:hidden"
@@ -212,7 +205,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile nav panel */}
       {mobileOpen && (
         <div className="border-t border-white/30 bg-white/30 backdrop-blur md:hidden">
           <div className="mx-auto max-w-6xl px-4 py-3">
