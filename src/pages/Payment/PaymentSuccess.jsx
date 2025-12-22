@@ -15,10 +15,10 @@ export default function PaymentSuccess() {
 
   const { plan, loading, refetch } = useUserPlan(user?.uid);
 
-  // ✅ avoid ESLint "setState in effect" warning
+
   const shownRef = useRef(false);
 
-  // 1) Call confirm once (fallback if webhook slow/not working)
+  // Call confirm once 
   useEffect(() => {
     if (!user?.uid || !sessionId) return;
 
@@ -30,12 +30,12 @@ export default function PaymentSuccess() {
           body: JSON.stringify({ sessionId }),
         }).catch(() => {});
       } finally {
-        refetch?.(); // sync plan
+        refetch?.(); 
       }
     })();
   }, [user?.uid, sessionId, refetch]);
 
-  // 2) When plan becomes premium => show SweetAlert once
+  //  When plan becomes premium SweetAlert 
   useEffect(() => {
     if (loading) return;
     if (!user) return;

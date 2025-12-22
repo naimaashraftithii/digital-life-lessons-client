@@ -70,10 +70,10 @@ const Pricing = () => {
             )}
           </div>
 
-          {/* your UI cards stay same */}
+          {/*  UI cards */}
           <div className="mt-8 rounded-3xl bg-white/70 p-5 text-sm font-semibold text-slate-600">
             <p>
-              ✅ After successful payment, Premium status is activated via Stripe webhook.
+              🔺 After successful payment, Premium status is activated via Stripe webhook.
               If it doesn’t update instantly, press refresh once.
             </p>
 

@@ -21,13 +21,13 @@ const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Register (Email/Password)
+  // Register 
   const createUser = (email, password) => {
     setLoading(true);
     return createUserWithEmailAndPassword(auth, email, password);
   };
 
-  // Login (Email/Password)
+  // Login 
   const signIn = (email, password) => {
     setLoading(true);
     return signInWithEmailAndPassword(auth, email, password);
@@ -48,7 +48,7 @@ const AuthProvider = ({ children }) => {
   // Update profile
   const updateUserProfile = async (name, photoURL) => {
     await updateProfile(auth.currentUser, { displayName: name, photoURL });
-    // keep local state in sync
+  
     setUser((prev) =>
       prev ? { ...prev, displayName: name, photoURL } : prev
     );
@@ -58,7 +58,7 @@ const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
 
-      // ✅ Upsert user in MongoDB whenever logged in
+      //  Upsert user in MongoDB 
       if (currentUser?.uid && currentUser?.email) {
         try {
           await upsertUser(currentUser);

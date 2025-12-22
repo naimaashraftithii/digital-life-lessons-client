@@ -72,7 +72,7 @@ const Register = () => {
         Create account
       </h2>
       <p className="mt-2 text-sm font-semibold text-slate-600">
-        আপনার প্রোফাইল তৈরি করুন এবং lessons লিখতে শুরু করুন।
+        Create Your Profile and write start lessons
       </p>
 
       <form onSubmit={handleRegister} className="mt-6 space-y-4">

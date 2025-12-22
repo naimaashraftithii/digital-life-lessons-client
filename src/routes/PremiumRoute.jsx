@@ -12,7 +12,7 @@ export default function PremiumRoute({ children }) {
 
   if (authLoading || planLoading) return <LottieLoader />;
 
-  // Not logged in (extra safety)
+  // Not logged in 
   if (!user) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }

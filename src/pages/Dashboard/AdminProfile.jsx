@@ -17,7 +17,7 @@ export default function AdminProfile() {
   if (loading) return <LottieLoader />;
 
   const onSave = async () => {
-    // Firebase profile update optional (if you have updateProfile in your auth hook)
+    // Firebase profile update
     Swal.fire({
       icon: "info",
       title: "Profile update",
@@ -83,7 +83,7 @@ export default function AdminProfile() {
             Save Changes
           </button>
 
-          {/* Optional Activity Summary */}
+          {/*  Activity Summary */}
           <div className="mt-6 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
             <p className="text-sm font-extrabold text-slate-900">Activity summary (optional)</p>
             <ul className="mt-2 list-disc pl-5 text-sm font-semibold text-slate-700">

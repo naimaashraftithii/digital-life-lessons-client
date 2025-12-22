@@ -24,7 +24,7 @@ const Login = () => {
     const password = form.password.value;
 
     if (!email || !password) {
-      toast.error("Email এবং Password দুটোই দিন");
+      toast.error("Give Both Email And Password ");
       return;
     }
 
@@ -34,7 +34,7 @@ const Login = () => {
       toast.success("Login successful!");
       navigate(from, { replace: true });
     } catch (err) {
-      toast.error(err?.message || "Login failed. আবার চেষ্টা করুন");
+      toast.error(err?.message || "Login failed. Try Again");
     } finally {
       setSubmitting(false);
     }
@@ -55,12 +55,12 @@ const Login = () => {
 
   return (
     <div>
-      {/* consistent heading style */}
+      {/*  heading style */}
       <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
         Welcome back
       </h2>
       <p className="mt-2 text-sm font-semibold text-slate-600">
-        Login করে আপনার life lessons এ ফিরে যান।
+        Login and go life lessons 
       </p>
 
       <form onSubmit={handleLogin} className="mt-6 space-y-4">
@@ -93,7 +93,7 @@ const Login = () => {
           </div>
         </div>
 
-        {/* same button style */}
+        {/* button  */}
         <GradientButton
           type="submit"
           variant="bluePink"
@@ -121,7 +121,7 @@ const Login = () => {
       </GradientButton>
 
       <p className="mt-6 text-sm font-semibold text-slate-600">
-        নতুন এখানে?{" "}
+      Are you New here ?{" "}
         <Link to="/register" className="font-extrabold text-indigo-600 hover:underline">
           Create an account
         </Link>

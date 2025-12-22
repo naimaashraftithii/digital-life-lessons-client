@@ -9,7 +9,7 @@ body {
   color: #0f172a;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
 
-  /* Soft pastel gradient background */
+  /* gradient background */
   background: linear-gradient(
     90deg,
     #f6f2ff 0%,

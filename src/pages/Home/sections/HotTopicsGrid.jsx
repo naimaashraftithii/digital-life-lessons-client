@@ -75,7 +75,7 @@ const HotTopicsGrid = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
             </div>
 
-            {/* hover glow + shadow */}
+            {/* hover */}
             <div className="absolute inset-0 rounded-2xl ring-1 ring-white/30 transition group-hover:ring-white/60" />
             <div className="absolute inset-0 rounded-2xl shadow-lg transition group-hover:shadow-2xl" />
 

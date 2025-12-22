@@ -109,9 +109,9 @@ const FeaturedLessonsCarousel = () => {
           modules={[Autoplay]}
           onSwiper={(s) => (swiperRef.current = s)}
           loop={true}
-          speed={300} // smoother continuous feel
+          speed={300} 
           autoplay={{
-            delay: 2, // ✅ continuous scrolling
+            delay: 2, 
             disableOnInteraction: false,
             pauseOnMouseEnter: true,
           }}

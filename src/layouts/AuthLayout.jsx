@@ -4,13 +4,13 @@ const AuthLayout = () => {
   return (
     <div className="min-h-screen w-full bg-[radial-gradient(1200px_600px_at_10%_10%,rgba(99,102,241,.25),transparent),radial-gradient(1200px_600px_at_90%_20%,rgba(236,72,153,.18),transparent),linear-gradient(180deg,#f8fafc,white)]">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        {/* top bar */}
+        {/* top */}
         <div className="flex items-center justify-between">
           <Link to="/" className="text-sm font-extrabold text-indigo-600 hover:underline">
             ← Back to Home
           </Link>
 
-          {/* consistent brand */}
+          {/* top-bottom */}
           <Link to="/" className="flex items-center gap-2">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80 font-extrabold text-slate-900 shadow-sm">
               DL
@@ -24,7 +24,7 @@ const AuthLayout = () => {
 
         {/* layout */}
         <div className="mt-8 grid gap-6 lg:grid-cols-2 lg:items-stretch">
-          {/* left media */}
+          {/* left*/}
           <div className="hidden overflow-hidden rounded-4xl bg-white/70 shadow-sm backdrop-blur lg:block">
             <div className="relative h-full min-h-[520px]">
               <img

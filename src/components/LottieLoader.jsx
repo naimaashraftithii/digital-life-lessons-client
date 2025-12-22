@@ -5,12 +5,12 @@ const LottieLoader = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/35 backdrop-blur">
       <div className="flex flex-col items-center">
-        {/* Bigger Lottie */}
+        {/* Lottie */}
         <div className="w-40 sm:w-52">
           <Lottie animationData={loadingAnim} loop />
         </div>
 
-        {/* Animated Text */}
+        {/* Text */}
         <h1 className="mt-2 text-center text-3xl sm:text-4xl font-extrabold text-neutral-900 tracking-wide animate-bounce">
           Loading<span className="animate-pulse">....!!!</span>
         </h1>

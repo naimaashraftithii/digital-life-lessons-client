@@ -43,7 +43,7 @@ export default function AddLesson() {
       category,
       tone,
       visibility,
-      accessLevel: isPremium ? accessLevel : "free", // force free for free users
+      accessLevel: isPremium ? accessLevel : "free", 
       photoUrl: photoUrl || "",
       creator: {
         uid: user.uid,

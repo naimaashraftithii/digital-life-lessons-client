@@ -11,7 +11,7 @@ export default function useUserPlan(uid) {
   const [loading, setLoading] = useState(true);
   const [bump, setBump] = useState(0);
 
-  // ✅ call this to refresh premium/role status anytime
+  // refresh premium status 
   const refetch = useCallback(() => {
     setBump((v) => v + 1);
   }, []);

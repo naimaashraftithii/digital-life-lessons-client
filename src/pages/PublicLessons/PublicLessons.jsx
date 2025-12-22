@@ -20,7 +20,7 @@ const PublicLessons = () => {
       try {
         setLoading(true);
         setErr("");
-        const data = await getPublicLessons(); // ✅ real API
+        const data = await getPublicLessons(); 
         if (!ignore) setLessons(Array.isArray(data) ? data : []);
       } catch (e) {
         if (!ignore) setErr(e.message || "Failed to load lessons");

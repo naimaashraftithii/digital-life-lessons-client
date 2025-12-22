@@ -13,10 +13,10 @@ const Home = () => {
     <div className="bg-slate-50 w-full">
       
       <HeroSlider />
-      {/* Featured slider like screenshot */}
+      {/* Featured slider */}
       <FeaturedLessonsCarousel />
 
-      {/* Pricing teaser cards like screenshot */}
+      {/* Pricing teaser cards */}
       <PricingTeaser />
       <FeaturedLessons />
       <WhyLifeMatters />

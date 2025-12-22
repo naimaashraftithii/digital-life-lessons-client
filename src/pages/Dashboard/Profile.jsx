@@ -98,7 +98,7 @@ const Profile = () => {
   const [photo, setPhoto] = useState(user?.photoURL || "");
   const [saving, setSaving] = useState(false);
 
-  // Your public lessons list (dynamic)
+  //public lessons list 
   const [myPublicLessons, setMyPublicLessons] = useState([]);
   const [lessonsLoading, setLessonsLoading] = useState(true);
 
@@ -153,7 +153,7 @@ const Profile = () => {
 
   if (authLoading || loading) return <LottieLoader />;
 
-  // If backend says "User not found", show a clear message (upsert fixes it)
+  // If "User not found"
   if (error) {
     return (
       <div className="min-h-[calc(100vh-80px)] w-full px-4 py-6">

@@ -31,3 +31,14 @@ export const adminToggleReviewed = (id, isReviewed) =>
 
 export const adminDeleteLesson = (id) =>
   apiFetch(`/admin/lessons/${id}`, { method: "DELETE" });
+export function getReportedLessons() {
+  return apiFetch("/admin/reported-lessons");
+}
+
+export function ignoreReports(lessonId) {
+  return apiFetch(`/admin/reported-lessons/${lessonId}`, { method: "DELETE" });
+}
+
+export function deleteLessonAdmin(lessonId) {
+  return apiFetch(`/admin/lessons/${lessonId}`, { method: "DELETE" });
+}

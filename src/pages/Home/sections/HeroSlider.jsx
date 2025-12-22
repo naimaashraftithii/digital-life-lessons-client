@@ -28,7 +28,7 @@ const slides = [
     badge: "Community Wisdom",
     title: "Learn from stories, not just quotes.",
     desc: "Browse lessons by category, emotional tone, and keywords—discover insights that match your journey.",
-    // optional: video background inside card (not autoplay full background)
+    //  video background 
     video:
       "https://www.w3schools.com/html/mov_bbb.mp4",
     image:

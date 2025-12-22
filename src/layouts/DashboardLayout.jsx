@@ -50,7 +50,7 @@ const Sidebar = ({
         )}
       </div>
 
-      {/* User mini card */}
+      {/* User card */}
       <div className="mx-4 rounded-3xl bg-white/70 p-4 shadow-sm backdrop-blur">
         <div className="flex items-center gap-3">
           <img
@@ -97,7 +97,7 @@ const Sidebar = ({
           <NavLink
             key={m.to}
             to={m.to}
-            className={navClass} // ✅ USED HERE
+            className={navClass} 
             onClick={() => mobile && onClose?.()}
           >
             <span className="text-lg">{m.icon}</span>
@@ -106,7 +106,7 @@ const Sidebar = ({
         ))}
       </nav>
 
-      {/* Bottom actions */}
+      {/* Bottom  */}
       <div className="px-4 pb-5">
         {!isPremium && !isAdmin && (
           <div className="mb-3 rounded-3xl bg-white/70 p-4 shadow-sm backdrop-blur">
@@ -238,7 +238,7 @@ const DashboardLayout = () => {
         </div>
       </div>
 
-      {/* Mobile Drawer */}
+      {/* Mobile */}
       <AnimatePresence>
         {open && (
           <>

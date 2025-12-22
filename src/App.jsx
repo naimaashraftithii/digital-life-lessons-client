@@ -21,7 +21,7 @@ function App() {
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
 
-        {/* Dashboard (Protected) */}
+        {/* Dashboard*/}
         <Route
           path="dashboard"
           element={

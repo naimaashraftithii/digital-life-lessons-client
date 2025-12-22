@@ -32,7 +32,7 @@ export default function ManageLessons() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+ 
   }, []);
 
   const filteredCount = useMemo(() => lessons.length, [lessons]);
