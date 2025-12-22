@@ -16,7 +16,7 @@ export async function upsertUser(firebaseUser) {
     body: JSON.stringify(payload),
   });
 
-  // if server says not ok, throw message
+  // if server  not ok
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data?.message || "Upsert failed");
 

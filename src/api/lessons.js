@@ -13,13 +13,13 @@ export function getMyLessons(uid) {
   return apiFetch(`/lessons/my?uid=${uid}`);
 }
 
-// ✅ GET public lessons (REAL API)
+//  GET public lessons 
 export function getPublicLessons(params = {}) {
   const qs = new URLSearchParams(params).toString();
   return apiFetch(`/lessons/public${qs ? `?${qs}` : ""}`);
 }
 
-// ✅ GET single lesson (REAL API)
+// GET single lesson (
 export function getLessonById(id) {
   return apiFetch(`/lessons/${id}`);
 }
