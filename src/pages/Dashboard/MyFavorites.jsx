@@ -1,9 +1,11 @@
+// src/pages/dashboard/MyFavorites.jsx
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import useAuth from "../../hooks/useAuth";
 import LottieLoader from "../../components/LottieLoader";
-import { getFavoriteLessons, toggleFavorite } from "../../api/favorites";
+import { getFavorites, toggleFavorite } from "../../api/favorites";
+import { getLessonById } from "../../api/lessons";
 
 export default function MyFavorites() {
   const { user } = useAuth();
@@ -13,10 +15,28 @@ export default function MyFavorites() {
   const load = async () => {
     try {
       setLoading(true);
-      const data = await getFavoriteLessons(user?.uid);
-      setRows(Array.isArray(data) ? data : []);
+
+      // ✅ server returns [{ uid, lessonId, createdAt }]
+      const favs = await getFavorites(user?.uid);
+
+      const favArr = Array.isArray(favs) ? favs : [];
+      const lessonIds = favArr.map((f) => f.lessonId).filter(Boolean);
+
+      // ✅ fetch lesson details
+      const lessons = await Promise.all(
+        lessonIds.map(async (id) => {
+          try {
+            return await getLessonById(id);
+          } catch {
+            return null;
+          }
+        })
+      );
+
+      setRows(lessons.filter(Boolean));
     } catch (e) {
       toast.error(e.message || "Failed to load favorites");
+      setRows([]);
     } finally {
       setLoading(false);
     }

@@ -19,6 +19,7 @@ export default function Admin() {
             {plan?.user?.name || user?.displayName || "Admin"}
           </span>
         </p>
+
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white">
             Role: {plan?.role || "admin"}

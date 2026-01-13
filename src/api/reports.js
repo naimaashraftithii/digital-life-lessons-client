@@ -1,8 +1,8 @@
-import { apiFetch } from "./client";
+// src/api/reports.js
+import http from "./http";
 
-export function reportLesson(payload) {
-  return apiFetch("/lessonReports", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
+// POST /lessonReports
+export const reportLesson = async (payload) => {
+  const { data } = await http.post("/lessonReports", payload);
+  return data;
+};

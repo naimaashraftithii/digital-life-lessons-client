@@ -1,51 +1,23 @@
-import { useCallback, useEffect, useState } from "react";
-
-const API = import.meta.env.VITE_API_URL;
+// src/hooks/useUserPlan.js
+import { useEffect, useState } from "react";
+import { getUserPlan } from "../api/usersPlan";
 
 export default function useUserPlan(uid) {
-  const [plan, setPlan] = useState({
-    isPremium: false,
-    role: "user",
-    user: null,
-  });
+  const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [bump, setBump] = useState(0);
-
-  // refresh premium status 
-  const refetch = useCallback(() => {
-    setBump((v) => v + 1);
-  }, []);
 
   useEffect(() => {
-    if (!uid) {
-      setPlan({ isPremium: false, role: "user", user: null });
-      setLoading(false);
-      return;
-    }
-
     let ignore = false;
 
     (async () => {
       try {
         setLoading(true);
-
-        const res = await fetch(`${API}/users/plan?uid=${uid}`);
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
+        if (!uid) {
           if (!ignore) setPlan({ isPremium: false, role: "user", user: null });
           return;
         }
-
-        if (!ignore) {
-          setPlan({
-            isPremium: !!data?.isPremium,
-            role: data?.role || "user",
-            user: data?.user || null,
-          });
-        }
-      } catch {
-        if (!ignore) setPlan({ isPremium: false, role: "user", user: null });
+        const data = await getUserPlan(uid);
+        if (!ignore) setPlan(data);
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -54,7 +26,7 @@ export default function useUserPlan(uid) {
     return () => {
       ignore = true;
     };
-  }, [uid, bump]);
+  }, [uid]);
 
-  return { plan, loading, refetch };
+  return { plan, loading };
 }

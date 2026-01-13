@@ -1,4 +1,5 @@
-const API = import.meta.env.VITE_API_URL;
+// src/api/users.js
+import { apiFetch } from "./client";
 
 export async function upsertUser(firebaseUser) {
   if (!firebaseUser?.uid || !firebaseUser?.email) return;
@@ -10,15 +11,8 @@ export async function upsertUser(firebaseUser) {
     photoURL: firebaseUser.photoURL || "",
   };
 
-  const res = await fetch(`${API}/users/upsert`, {
+  return apiFetch("/users/upsert", {
     method: "POST",
-    headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
   });
-
-  // if server  not ok
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message || "Upsert failed");
-
-  return data;
 }

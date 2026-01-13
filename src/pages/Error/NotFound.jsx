@@ -15,7 +15,8 @@ const NotFound = () => {
       </h2>
 
       <p className="mt-2 text-sm text-slate-600 max-w-md">
-        আপনি যে পেজটি খুঁজছেন সেটি এই ওয়েবসাইটে নেই।
+     
+        YOUR FIND PAGE ARE NOT AVAILABLE FOR NOW,YOU'LL TRY LATER..!!!
       </p>
 
       <div className="mt-6">

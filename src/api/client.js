@@ -1,17 +1,18 @@
+// src/api/client.js
 const API = import.meta.env.VITE_API_URL;
 
 export async function apiFetch(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
+    ...options,
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
-    credentials: "include",
-    ...options,
   });
 
   const text = await res.text();
-  let data;
+  let data = null;
+
   try {
     data = text ? JSON.parse(text) : null;
   } catch {
@@ -19,8 +20,7 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!res.ok) {
-    const msg = data?.message || "Request failed";
-    throw new Error(msg);
+    throw new Error(data?.message || "Request failed");
   }
 
   return data;

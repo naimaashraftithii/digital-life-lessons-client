@@ -1,12 +1,15 @@
-import { apiFetch } from "./client";
+// src/api/favorites.js
+import http from "./http";
 
-export function toggleFavorite(uid, lessonId) {
-  return apiFetch("/favorites/toggle", {
-    method: "POST",
-    body: JSON.stringify({ uid, lessonId }),
-  });
-}
+// GET /favorites?uid=xxx  -> array
+export const getFavorites = async (uid) => {
+  if (!uid) return [];
+  const { data } = await http.get("/favorites", { params: { uid } });
+  return Array.isArray(data) ? data : [];
+};
 
-export function getFavoriteLessons(uid) {
-  return apiFetch(`/favorites/lessons?uid=${uid}`);
-}
+// POST /favorites/toggle  { uid, lessonId } -> { saved: boolean }
+export const toggleFavorite = async (uid, lessonId) => {
+  const { data } = await http.post("/favorites/toggle", { uid, lessonId });
+  return data;
+};

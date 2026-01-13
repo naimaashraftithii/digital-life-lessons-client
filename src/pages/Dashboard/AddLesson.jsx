@@ -21,7 +21,7 @@ export default function AddLesson() {
   const [photoUrl, setPhotoUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
-  if (loading) return <LottieLoader />;
+  if (loading) return <LottieLoader title="Loading..." />;
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -31,19 +31,18 @@ export default function AddLesson() {
       return;
     }
 
-    // Free user cannot post premium lessons, but can post FREE
     if (accessLevel === "premium" && !isPremium) {
       toast.error("Upgrade to Premium to create premium lessons");
       return;
     }
 
-    const lesson = {
+    const payload = {
       title,
       description,
       category,
       tone,
       visibility,
-      accessLevel: isPremium ? accessLevel : "free", 
+      accessLevel: isPremium ? accessLevel : "free",
       photoUrl: photoUrl || "",
       creator: {
         uid: user.uid,
@@ -55,17 +54,8 @@ export default function AddLesson() {
 
     try {
       setSaving(true);
-      await createLesson(lesson);
+      await createLesson(payload);
       toast.success("Lesson added successfully ✅");
-
-      setTitle("");
-      setDescription("");
-      setCategory("Personal Growth");
-      setTone("Motivational");
-      setVisibility("public");
-      setAccessLevel("free");
-      setPhotoUrl("");
-
       navigate("/dashboard/my-lessons");
     } catch (err) {
       toast.error(err?.message || "Failed to create lesson");
@@ -189,9 +179,9 @@ export default function AddLesson() {
         </div>
 
         {!isPremium && (
-          <p className="text-xs font-semibold text-amber-700">
+          <div className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
             “Premium” is disabled for Free users. Upgrade to Premium to create paid lessons.
-          </p>
+          </div>
         )}
 
         <button

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import Swal from "sweetalert2";
 import {
   FacebookShareButton,
   WhatsappShareButton,
@@ -13,9 +14,15 @@ import {
 import LottieLoader from "../../components/LottieLoader";
 import useAuth from "../../hooks/useAuth";
 import useUserPlan from "../../hooks/useUserPlan";
-import { getLessonById, getFavoritesCount, getSimilarLessons, toggleLike } from "../../api/lessons";
+import {
+  getLessonById,
+  getFavoritesCount,
+  getSimilarLessons,
+  toggleLike,
+} from "../../api/lessons";
+
 import { toggleFavorite } from "../../api/favorites";
-import { addComment, getComments } from "../../api/comments";
+import { addComment, deleteComment, getComments } from "../../api/comments";
 import { reportLesson } from "../../api/reports";
 
 export default function LessonDetails() {
@@ -33,10 +40,18 @@ export default function LessonDetails() {
   const [similar, setSimilar] = useState([]);
 
   const shareUrl = useMemo(() => window.location.href, []);
-
   const views = useMemo(() => Math.floor(Math.random() * 10000), []);
 
   const locked = lesson?.accessLevel === "premium" && !plan?.isPremium;
+
+  const reloadComments = async () => {
+    try {
+      const cm = await getComments(id);
+      setComments(Array.isArray(cm) ? cm : []);
+    } catch (e) {
+      toast.error(e?.message || "Failed to load comments");
+    }
+  };
 
   const loadAll = async () => {
     setLoading(true);
@@ -54,7 +69,7 @@ export default function LessonDetails() {
       setComments(Array.isArray(cm) ? cm : []);
       setSimilar(Array.isArray(sim) ? sim : []);
     } catch (e) {
-      toast.error(e.message || "Failed to load lesson");
+      toast.error(e?.message || "Failed to load lesson");
     } finally {
       setLoading(false);
     }
@@ -72,7 +87,10 @@ export default function LessonDetails() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
         <div className="max-w-md rounded-2xl bg-white p-6 shadow-sm text-center">
           <h2 className="text-xl font-extrabold text-slate-900">Lesson not found</h2>
-          <Link to="/public-lessons" className="mt-4 inline-block font-bold text-slate-900 underline">
+          <Link
+            to="/public-lessons"
+            className="mt-4 inline-block font-bold text-slate-900 underline"
+          >
             Back to lessons
           </Link>
         </div>
@@ -80,55 +98,62 @@ export default function LessonDetails() {
     );
   }
 
-  if (locked) {
-    return <Navigate to="/pricing" replace state={{ from: `/lesson/${id}` }} />;
-  }
+  if (locked) return <Navigate to="/pricing" replace state={{ from: `/lesson/${id}` }} />;
 
   const onLike = async () => {
-    if (!user?.uid) {
-      toast.error("Please log in to like");
-      return;
-    }
+    if (!user?.uid) return toast.error("Please log in to like");
+
     try {
       const res = await toggleLike(id, user.uid);
-      setLesson((prev) => ({
-        ...prev,
-        likesCount: res.likesCount,
-      }));
+      setLesson((prev) => ({ ...prev, likesCount: res?.likesCount ?? prev?.likesCount ?? 0 }));
+      toast.success("Liked updated ✅");
     } catch (e) {
-      toast.error(e.message || "Failed to like");
+      toast.error(e?.message || "Failed to like");
     }
   };
 
   const onFavorite = async () => {
-    if (!user?.uid) {
-      toast.error("Please log in to save");
-      return;
-    }
+    if (!user?.uid) return toast.error("Please log in to save");
+
     try {
       const res = await toggleFavorite(user.uid, id);
-      // update count 
-      setFavCount((c) => (res.saved ? c + 1 : Math.max(0, c - 1)));
-      toast.success(res.saved ? "Saved to favorites 🔖" : "Removed from favorites");
+      setFavCount((c) => (res?.saved ? c + 1 : Math.max(0, c - 1)));
+      toast.success(res?.saved ? "Saved to favorites 🔖" : "Suggestion removed ✅");
     } catch (e) {
-      toast.error(e.message || "Failed to save");
+      toast.error(e?.message || "Failed to save");
     }
   };
 
   const onReport = async () => {
-    if (!user?.uid && !user?.email) {
-      toast.error("Please log in to report");
-      return;
-    }
+    if (!user?.uid && !user?.email) return toast.error("Please log in to report");
 
-    const reason = window.prompt(
-      "Reason: Inappropriate Content / Hate Speech or Harassment / Misleading or False Information / Spam or Promotional Content / Sensitive or Disturbing Content / Other"
-    );
+    const { value: reason } = await Swal.fire({
+      title: "Report Lesson",
+      input: "select",
+      inputOptions: {
+        "Inappropriate Content": "Inappropriate Content",
+        "Hate Speech or Harassment": "Hate Speech or Harassment",
+        "Misleading or False Information": "Misleading or False Information",
+        "Spam or Promotional Content": "Spam or Promotional Content",
+        "Sensitive or Disturbing Content": "Sensitive or Disturbing Content",
+        Other: "Other",
+      },
+      inputPlaceholder: "Select a reason",
+      showCancelButton: true,
+      confirmButtonText: "Next",
+    });
 
     if (!reason) return;
 
-    const ok = window.confirm("Confirm report this lesson?");
-    if (!ok) return;
+    const confirm = await Swal.fire({
+      icon: "warning",
+      title: "Confirm report?",
+      text: "Are you sure you want to report this lesson?",
+      showCancelButton: true,
+      confirmButtonText: "Yes, report",
+    });
+
+    if (!confirm.isConfirmed) return;
 
     try {
       await reportLesson({
@@ -139,32 +164,50 @@ export default function LessonDetails() {
       });
       toast.success("Reported ✅");
     } catch (e) {
-      toast.error(e.message || "Failed to report");
+      toast.error(e?.message || "Failed to report");
     }
   };
 
   const onPostComment = async () => {
-    if (!user?.uid) {
-      toast.error("Please log in to comment");
-      return;
-    }
-    if (!commentText.trim()) return;
+    if (!user?.uid) return toast.error("Please log in to comment");
+    if (!commentText.trim()) return toast.error("Write something first");
 
     try {
       await addComment({
         lessonId: id,
         uid: user.uid,
-        name: user.displayName || "",
+        name: user.displayName || "User",
         photoURL: user.photoURL || "",
         text: commentText.trim(),
       });
 
       setCommentText("");
-      const updated = await getComments(id);
-      setComments(Array.isArray(updated) ? updated : []);
+      await reloadComments();
       toast.success("Comment posted ✅");
     } catch (e) {
-      toast.error(e.message || "Failed to comment");
+      toast.error(e?.message || "Failed to comment");
+    }
+  };
+
+  const onDeleteComment = async (commentId) => {
+    if (!user?.uid) return toast.error("Please log in");
+
+    const confirm = await Swal.fire({
+      icon: "warning",
+      title: "Delete comment?",
+      text: "This action cannot be undone.",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      await deleteComment(commentId, user.uid);
+      setComments((prev) => prev.filter((c) => String(c._id) !== String(commentId)));
+      toast.success("Comment deleted ✅");
+    } catch (e) {
+      toast.error(e?.message || "Failed to delete");
     }
   };
 
@@ -216,7 +259,11 @@ export default function LessonDetails() {
           {/* Image */}
           {lesson.photoUrl && (
             <div className="mt-5 overflow-hidden rounded-3xl border bg-slate-50">
-              <img src={lesson.photoUrl} alt="lesson" className="w-full max-h-[420px] object-cover" />
+              <img
+                src={lesson.photoUrl}
+                alt="lesson"
+                className="w-full max-h-[420px] object-cover"
+              />
             </div>
           )}
 
@@ -224,28 +271,6 @@ export default function LessonDetails() {
           <p className="mt-5 whitespace-pre-line text-slate-700 leading-relaxed">
             {lesson.description}
           </p>
-
-          {/* Metadata */}
-          <div className="mt-6 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-extrabold text-slate-600">Created</p>
-              <p className="text-sm font-bold text-slate-900">
-                {lesson.createdAt ? new Date(lesson.createdAt).toLocaleDateString() : "-"}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-extrabold text-slate-600">Updated</p>
-              <p className="text-sm font-bold text-slate-900">
-                {lesson.updatedAt ? new Date(lesson.updatedAt).toLocaleDateString() : "-"}
-              </p>
-            </div>
-            <div className="rounded-2xl bg-slate-50 p-4">
-              <p className="text-xs font-extrabold text-slate-600">Reading time</p>
-              <p className="text-sm font-bold text-slate-900">
-                {Math.max(1, Math.ceil((lesson.description?.length || 200) / 700))} min
-              </p>
-            </div>
-          </div>
 
           {/* Stats */}
           <div className="mt-6 flex flex-wrap gap-3">
@@ -331,19 +356,32 @@ export default function LessonDetails() {
           <div className="mt-5 space-y-3">
             {comments.map((c) => (
               <div key={c._id} className="rounded-2xl bg-slate-50 p-4">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={c.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
-                    alt="user"
-                    className="h-9 w-9 rounded-2xl object-cover"
-                  />
-                  <div>
-                    <p className="text-sm font-extrabold text-slate-900">{c.name || "User"}</p>
-                    <p className="text-xs font-semibold text-slate-600">
-                      {c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}
-                    </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={c.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
+                      alt="user"
+                      className="h-9 w-9 rounded-2xl object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-900">{c.name || "User"}</p>
+                      <p className="text-xs font-semibold text-slate-600">
+                        {c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}
+                      </p>
+                    </div>
                   </div>
+
+                  {user?.uid && c.uid === user.uid && (
+                    <button
+                      onClick={() => onDeleteComment(c._id)}
+                      className="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-700"
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
+
                 <p className="mt-2 text-sm font-semibold text-slate-700">{c.text}</p>
               </div>
             ))}
@@ -368,7 +406,9 @@ export default function LessonDetails() {
                 className="rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition"
               >
                 <p className="text-sm font-extrabold text-slate-900 line-clamp-2">{l.title}</p>
-                <p className="mt-1 text-xs font-semibold text-slate-600 line-clamp-2">{l.description}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-600 line-clamp-2">
+                  {l.description}
+                </p>
                 <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
                   <span className="rounded-full bg-indigo-100 px-2 py-1 font-extrabold text-indigo-700">
                     {l.category}

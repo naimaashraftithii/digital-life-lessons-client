@@ -1,27 +1,34 @@
+// src/routes/router.jsx
 import { createBrowserRouter } from "react-router-dom";
 import MainLayout from "../layouts/MainLayout";
 import AuthLayout from "../layouts/AuthLayout";
 import DashboardLayout from "../layouts/DashboardLayout";
+
 import Home from "../pages/Home/Home";
 import PublicLessons from "../pages/PublicLessons/PublicLessons";
 import LessonDetails from "../pages/LessonDetails/LessonDetails";
 import Pricing from "../pages/Pricing/Pricing";
 import NotFound from "../pages/Error/NotFound";
+
 import Login from "../pages/Auth/Login/Login";
 import Register from "../pages/Auth/Register/Register";
+
 import DashboardHome from "../pages/Dashboard/DashboardHome";
 import AddLesson from "../pages/Dashboard/AddLesson";
 import MyLessons from "../pages/Dashboard/MyLessons";
 import MyFavorites from "../pages/Dashboard/MyFavorites";
 import Profile from "../pages/Dashboard/Profile";
+
 import PrivateRoute from "./PrivateRoute";
 import AdminRoute from "./AdminRoute";
+
 import Admin from "../pages/Dashboard/Admin";
 import AdminHome from "../pages/Dashboard/AdminHome";
 import AdminProfile from "../pages/Dashboard/AdminProfile";
 import ManageUsers from "../pages/Dashboard/ManageUsers";
 import ManageLessons from "../pages/Dashboard/ManageLessons";
 import ReportedLessons from "../pages/Dashboard/ReportedLessons";
+
 import PaymentSuccess from "../pages/Payment/PaymentSuccess";
 import PaymentCancel from "../pages/Payment/PaymentCancel";
 
@@ -29,26 +36,16 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <MainLayout />,
-    errorElement: <NotFound />,
     children: [
       { index: true, element: <Home /> },
       { path: "public-lessons", element: <PublicLessons /> },
 
-    
+      // ✅ details should be public (premium locked inside component)
+      { path: "lesson/:id", element: <LessonDetails /> },
+
       { path: "pricing", element: <Pricing /> },
-
-
       { path: "payment-success", element: <PaymentSuccess /> },
       { path: "payment-cancel", element: <PaymentCancel /> },
-
-      {
-        path: "lesson/:id",
-        element: (
-          <PrivateRoute>
-            <LessonDetails />
-          </PrivateRoute>
-        ),
-      },
 
       {
         path: "dashboard",
@@ -81,6 +78,9 @@ const router = createBrowserRouter([
           },
         ],
       },
+
+      // ✅ always catch 404
+      { path: "*", element: <NotFound /> },
     ],
   },
 

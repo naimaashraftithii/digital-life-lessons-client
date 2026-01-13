@@ -1,42 +1,100 @@
-import { Routes, Route } from "react-router-dom";
-import MainLayout from "./layouts/MainLayout";
+// src/main.jsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import "./index.css";
 
-import Home from "./pages/Home";
-import PublicLessons from "./pages/PublicLessons/PublicLessons";
-import Login from "./pages/Auth/Login/Login";
-import Register from "./pages/Auth/Register/Register";
+import App from "./App";
+import ErrorPage from "./pages/ErrorPage";
+import NotFound from "./pages/NotFound";
 
 import PrivateRoute from "./routes/PrivateRoute";
+import AdminRoute from "./routes/AdminRoute";
 import DashboardLayout from "./layouts/DashboardLayout";
+
 import DashboardHome from "./pages/Dashboard/DashboardHome";
+
+// TODO: keep your real pages
 import AddLesson from "./pages/Dashboard/AddLesson";
 import MyLessons from "./pages/Dashboard/MyLessons";
+import MyFavorites from "./pages/Dashboard/MyFavorites";
+import Profile from "./pages/Dashboard/Profile";
 
-function App() {
-  return (
-    <Routes>
-      <Route path="/" element={<MainLayout />}>
-        <Route index element={<Home />} />
-        <Route path="public-lessons" element={<PublicLessons />} />
-        <Route path="login" element={<Login />} />
-        <Route path="register" element={<Register />} />
+import AdminHome from "./pages/Dashboard/Admin/AdminHome";
+import ManageUsers from "./pages/Dashboard/Admin/ManageUsers";
+import ManageLessons from "./pages/Dashboard/Admin/ManageLessons";
+import ReportedLessons from "./pages/Dashboard/Admin/ReportedLessons";
+import AdminProfile from "./pages/Dashboard/Admin/AdminProfile";
 
-        {/* Dashboard*/}
-        <Route
-          path="dashboard"
-          element={
-            <PrivateRoute>
-              <DashboardLayout />
-            </PrivateRoute>
-          }
-        >
-          <Route index element={<DashboardHome />} />
-          <Route path="add-lesson" element={<AddLesson />} />
-          <Route path="my-lessons" element={<MyLessons />} />
-        </Route>
-      </Route>
-    </Routes>
-  );
-}
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <App />,
+    errorElement: <ErrorPage />,
+  },
+  {
+    path: "/dashboard",
+    element: (
+      <PrivateRoute>
+        <DashboardLayout />
+      </PrivateRoute>
+    ),
+    errorElement: <ErrorPage />,
+    children: [
+      { index: true, element: <DashboardHome /> },
+      { path: "add-lesson", element: <AddLesson /> },
+      { path: "my-lessons", element: <MyLessons /> },
+      { path: "my-favorites", element: <MyFavorites /> },
+      { path: "profile", element: <Profile /> },
 
-export default App;
+      // Admin
+      {
+        path: "admin",
+        element: (
+          <AdminRoute>
+            <AdminHome />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "admin/manage-users",
+        element: (
+          <AdminRoute>
+            <ManageUsers />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "admin/manage-lessons",
+        element: (
+          <AdminRoute>
+            <ManageLessons />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "admin/reported-lessons",
+        element: (
+          <AdminRoute>
+            <ReportedLessons />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "admin/profile",
+        element: (
+          <AdminRoute>
+            <AdminProfile />
+          </AdminRoute>
+        ),
+      },
+    ],
+  },
+  { path: "*", element: <NotFound /> },
+]);
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <RouterProvider router={router} />
+  </React.StrictMode>
+);

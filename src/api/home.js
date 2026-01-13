@@ -1,13 +1,16 @@
-import { apiFetch } from "./client";
+const API = import.meta.env.VITE_API_URL;
 
-export function getFeaturedLessons() {
-  return apiFetch("/lessons/featured");
+export async function getFeaturedLessons() {
+  const res = await fetch(`${API}/home/featured`);
+  return await res.json();
 }
 
-export function getTopContributors() {
-  return apiFetch("/stats/top-contributors");
+export async function getMostSavedLessons() {
+  const res = await fetch(`${API}/home/most-saved`);
+  return await res.json();
 }
 
-export function getMostSavedLessons() {
-  return apiFetch("/stats/most-saved");
+export async function getTopContributors() {
+  const res = await fetch(`${API}/home/top-contributors`);
+  return await res.json();
 }

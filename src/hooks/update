@@ -1,0 +1,875 @@
+require("dotenv").config();
+
+const express = require("express");
+const cors = require("cors");
+const Stripe = require("stripe");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+
+const app = express();
+app.set("trust proxy", 1);
+const port = process.env.PORT || 3000;
+
+/* -------------------- Stripe -------------------- */
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+/* -------------------- Mongo Globals -------------------- */
+let usersCollection,
+  lessonsCollection,
+  favoritesCollection,
+  lessonReportsCollection,
+  paymentsCollection;
+
+/* -------------------- Stripe Webhook (MUST be before express.json) -------------------- */
+app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    if (!usersCollection || !paymentsCollection) {
+      return res.status(503).json({ message: "DB not ready yet" });
+    }
+
+    const sig = req.headers["stripe-signature"];
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(
+        req.body,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET
+      );
+    } catch (err) {
+      console.error("❌ Webhook signature verify failed:", err.message);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+
+      const uid = session?.metadata?.uid;
+      const email = session?.metadata?.email || session.customer_email;
+
+      if (uid) {
+        await usersCollection.updateOne(
+          { uid },
+          { $set: { isPremium: true, updatedAt: new Date() } }
+        );
+
+        await paymentsCollection.insertOne({
+          uid,
+          email,
+          stripeSessionId: session.id,
+          stripePaymentIntentId: session.payment_intent,
+          amount: session.amount_total,
+          currency: session.currency,
+          status: "paid",
+          createdAt: new Date(),
+        });
+
+        console.log("✅ Premium activated for uid:", uid);
+      } else {
+        console.log("⚠️ Webhook received but uid missing in metadata");
+      }
+    }
+
+    res.json({ received: true });
+  } catch (e) {
+    console.error("❌ Webhook handler error:", e.message);
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- CORS -------------------- */
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      const allowed = process.env.CLIENT_URL ? [process.env.CLIENT_URL] : [];
+      if (!origin) return cb(null, true); // Postman / server-to-server
+      if (!process.env.CLIENT_URL) return cb(null, true);
+      if (allowed.includes(origin)) return cb(null, true);
+      return cb(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
+
+/* -------------------- JSON (after webhook) -------------------- */
+app.use(express.json());
+
+/* -------------------- Firebase Admin (Optional) -------------------- */
+let admin = null;
+
+try {
+  // ✅ MUST require firebase-admin before initialize
+  admin = require("firebase-admin");
+
+  // ✅ Use local json file (your current approach)
+  // Make sure digital-life-lessons.json exists in server root
+  const serviceAccount = require("./digital-life-lessons.json");
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+
+  console.log("✅ Firebase Admin Initialized");
+} catch (e) {
+  admin = null;
+  console.log("⚠️ Firebase Admin NOT initialized:", e.message);
+}
+
+/* -------------------- verifyFBToken Middleware -------------------- */
+const verifyFBToken = async (req, res, next) => {
+  if (!admin) return res.status(501).send({ message: "Firebase Admin not configured" });
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).send({ message: "unauthorized" });
+  }
+
+  try {
+    const token = authHeader.split(" ")[1];
+    const decodedUser = await admin.auth().verifyIdToken(token);
+    req.decoded = decodedUser;
+    next();
+  } catch (err) {
+    return res.status(401).send({ message: "unauthorized" });
+  }
+};
+
+/* -------------------- MongoDB Connect -------------------- */
+const pass = encodeURIComponent(process.env.DB_PASSWORD);
+const uri = `mongodb+srv://${process.env.DB_USER}:${pass}@cluster0.x6bmi0l.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  },
+});
+
+async function run() {
+  try {
+    await client.connect();
+    const db = client.db(process.env.DB_NAME);
+
+    usersCollection = db.collection("users");
+    lessonsCollection = db.collection("lessons");
+    favoritesCollection = db.collection("favorites");
+    lessonReportsCollection = db.collection("lessonReports");
+    paymentsCollection = db.collection("payments");
+
+    console.log("✅ MongoDB connected");
+  } catch (err) {
+    console.log("❌ Mongo connect error:", err.message);
+  }
+}
+run().catch(console.dir);
+
+/* -------------------- Basic Routes -------------------- */
+app.get("/", (req, res) => res.send("✅ Digital Life Lessons Server Running"));
+
+app.get("/health", async (req, res) => {
+  try {
+    const db = client.db(process.env.DB_NAME);
+    const ping = await db.command({ ping: 1 });
+    res.json({ ok: true, ping });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+/* -------------------- Users -------------------- */
+app.post("/users/upsert", async (req, res) => {
+  try {
+    if (!usersCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const { uid, email, name, photoURL } = req.body;
+    if (!uid || !email) return res.status(400).json({ message: "uid & email required" });
+
+    const now = new Date();
+
+    const result = await usersCollection.updateOne(
+      { uid },
+      {
+        $set: { uid, email, name: name || "", photoURL: photoURL || "", updatedAt: now },
+        $setOnInsert: { role: "user", isPremium: false, createdAt: now },
+      },
+      { upsert: true }
+    );
+
+    res.json({ success: true, result });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/**
+ * ✅ Plan by UID param (this is what your client hook should call)
+ * GET /users/plan/:uid
+ */
+app.get("/users/plan/:uid", async (req, res) => {
+  try {
+    if (!usersCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const uid = req.params.uid;
+
+    const user = await usersCollection.findOne(
+      { uid },
+      { projection: { isPremium: 1, role: 1, email: 1, name: 1, photoURL: 1 } }
+    );
+
+    if (!user) {
+      return res.json({ isPremium: false, role: "user", user: null });
+    }
+
+    res.json({ isPremium: !!user.isPremium, role: user.role || "user", user });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- Lessons -------------------- */
+app.post("/lessons", async (req, res) => {
+  try {
+    if (!lessonsCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const lesson = req.body;
+
+    if (!lesson?.title || !lesson?.description || !lesson?.creator?.uid) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const now = new Date();
+    const doc = {
+      ...lesson,
+      likes: [],
+      likesCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const result = await lessonsCollection.insertOne(doc);
+    res.json({ success: true, insertedId: result.insertedId });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* ✅ My Lessons */
+app.get("/lessons/my", async (req, res) => {
+  try {
+    if (!lessonsCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const { uid } = req.query;
+    if (!uid) return res.status(400).json({ message: "uid required" });
+
+    const lessons = await lessonsCollection
+      .find({ "creator.uid": uid })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json(lessons);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/**
+ * ✅ Public Lessons with Search + Filter + Pagination (one page pagination supported)
+ * GET /lessons/public?search=&category=&tone=&page=1&limit=9
+ */
+app.get("/lessons/public", async (req, res) => {
+  try {
+    if (!lessonsCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const { search = "", category = "", tone = "" } = req.query;
+
+    const page = Math.max(1, parseInt(req.query.page || "1"));
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || "9")));
+    const skip = (page - 1) * limit;
+
+    const query = { visibility: "public" };
+    if (category) query.category = category;
+    if (tone) query.tone = tone;
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const total = await lessonsCollection.countDocuments(query);
+
+    const lessons = await lessonsCollection
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    res.json({
+      lessons,
+      total,
+      currentPage: page,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+app.get("/lessons/:id", async (req, res) => {
+  try {
+    if (!lessonsCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const lesson = await lessonsCollection.findOne({ _id: new ObjectId(req.params.id) });
+    if (!lesson) return res.status(404).json({ message: "Lesson not found" });
+    res.json(lesson);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* ✅ LIKE */
+app.patch("/lessons/:id/like", async (req, res) => {
+  try {
+    if (!lessonsCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const { uid } = req.body;
+    if (!uid) return res.status(400).json({ message: "uid required" });
+
+    const id = req.params.id;
+    const lesson = await lessonsCollection.findOne({ _id: new ObjectId(id) });
+    if (!lesson) return res.status(404).json({ message: "Lesson not found" });
+
+    const alreadyLiked = Array.isArray(lesson.likes) && lesson.likes.includes(uid);
+
+    const update = alreadyLiked
+      ? {
+          $pull: { likes: uid },
+          $inc: { likesCount: -1 },
+          $set: { updatedAt: new Date() },
+        }
+      : {
+          $addToSet: { likes: uid },
+          $inc: { likesCount: 1 },
+          $set: { updatedAt: new Date() },
+        };
+
+    await lessonsCollection.updateOne({ _id: new ObjectId(id) }, update);
+
+    const updated = await lessonsCollection.findOne(
+      { _id: new ObjectId(id) },
+      { projection: { likesCount: 1 } }
+    );
+
+    res.json({ likesCount: updated?.likesCount || 0 });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* ✅ Favorites count */
+app.get("/lessons/:id/favorites-count", async (req, res) => {
+  try {
+    if (!favoritesCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const lessonId = req.params.id;
+    const count = await favoritesCollection.countDocuments({ lessonId });
+    res.json({ favoritesCount: count });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* ✅ Similar lessons */
+app.get("/lessons/:id/similar", async (req, res) => {
+  try {
+    if (!lessonsCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const id = req.params.id;
+    const current = await lessonsCollection.findOne({ _id: new ObjectId(id) });
+    if (!current) return res.json([]);
+
+    const query = {
+      _id: { $ne: new ObjectId(id) },
+      visibility: "public",
+      $or: [{ category: current.category }, { tone: current.tone }],
+    };
+
+    const similar = await lessonsCollection
+      .find(query)
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .toArray();
+
+    res.json(similar);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- Favorites Toggle -------------------- */
+app.post("/favorites/toggle", async (req, res) => {
+  try {
+    if (!favoritesCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const { uid, lessonId } = req.body;
+    if (!uid || !lessonId) return res.status(400).json({ message: "uid & lessonId required" });
+
+    const exists = await favoritesCollection.findOne({ uid, lessonId });
+
+    if (exists) {
+      await favoritesCollection.deleteOne({ uid, lessonId });
+      return res.json({ saved: false });
+    }
+
+    await favoritesCollection.insertOne({ uid, lessonId, createdAt: new Date() });
+    res.json({ saved: true });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+///favorites
+app.get("/favorites", async (req, res) => {
+  try {
+    if (!favoritesCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const { uid } = req.query;
+    if (!uid) return res.status(400).json({ message: "uid required" });
+
+    const favs = await favoritesCollection.find({ uid }).sort({ createdAt: -1 }).toArray();
+    res.json(favs);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// /favorites/lessons
+app.get("/favorites/lessons", async (req, res) => {
+  try {
+    const { uid } = req.query;
+    if (!uid) return res.status(400).json({ message: "uid required" });
+
+    const favs = await favoritesCollection.find({ uid }).toArray();
+    const ids = favs.map((f) => new ObjectId(f.lessonId));
+
+    const lessons = await lessonsCollection
+      .find({ _id: { $in: ids } })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json(lessons);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+//  featured lessons
+app.get("/lessons/featured", async (req, res) => {
+  try {
+    const lessons = await lessonsCollection
+      .find({ visibility: "public", isFeatured: true })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .toArray();
+    res.json(lessons);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+//Most Saved Lessons
+app.get("/stats/most-saved", async (req, res) => {
+  try {
+    const pipeline = [
+      { $group: { _id: "$lessonId", savedCount: { $sum: 1 } } },
+      { $sort: { savedCount: -1 } },
+      { $limit: 6 },
+      {
+        $lookup: {
+          from: "lessons",
+          let: { lessonId: { $toObjectId: "$_id" } },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$lessonId"] } } },
+            { $match: { visibility: "public" } },
+          ],
+          as: "lesson",
+        },
+      },
+      { $unwind: "$lesson" },
+      { $replaceRoot: { newRoot: "$lesson" } },
+    ];
+
+    const lessons = await favoritesCollection.aggregate(pipeline).toArray();
+    res.json(lessons);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+//top contributors
+
+app.get("/stats/top-contributors", async (req, res) => {
+  try {
+    const pipeline = [
+      { $match: { visibility: "public" } },
+      { $group: { _id: "$creator.uid", lessons: { $sum: 1 }, creator: { $first: "$creator" } } },
+      { $sort: { lessons: -1 } },
+      { $limit: 6 },
+    ];
+
+    const result = await lessonsCollection.aggregate(pipeline).toArray();
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+
+/* -------------------- COMMENTS -------------------- */
+// GET /comments?lessonId=xxx
+app.get("/comments", async (req, res) => {
+  try {
+    const { lessonId } = req.query;
+    if (!lessonId) return res.status(400).json({ message: "lessonId required" });
+
+    const rows = await commentsCollection
+      .find({ lessonId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// POST /comments
+app.post("/comments", async (req, res) => {
+  try {
+    const { lessonId, uid, name, photoURL, text } = req.body;
+    if (!lessonId || !uid || !text) {
+      return res.status(400).json({ message: "lessonId, uid, text required" });
+    }
+
+    const doc = {
+      lessonId,
+      uid,
+      name: name || "",
+      photoURL: photoURL || "",
+      text,
+      createdAt: new Date(),
+    };
+
+    const result = await commentsCollection.insertOne(doc);
+    res.json({ success: true, insertedId: result.insertedId });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+
+//Add comments routes
+const { ObjectId } = require("mongodb");
+
+// GET comments for a lesson
+app.get("/lessons/:lessonId/comments", async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const comments = await commentsCollection
+      .find({ lessonId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    res.json(comments);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// POST comment for a lesson
+app.post("/lessons/:lessonId/comments", async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const { uid, name, photoURL, text } = req.body;
+
+    if (!uid) return res.status(400).json({ message: "uid required" });
+    if (!text || !text.trim()) return res.status(400).json({ message: "Comment text required" });
+
+    const doc = {
+      lessonId,
+      uid,
+      name: name || "Anonymous",
+      photoURL: photoURL || "",
+      text: text.trim(),
+      createdAt: new Date(),
+    };
+
+    const result = await commentsCollection.insertOne(doc);
+    res.json({ ...doc, _id: result.insertedId });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+// DELETE comment (optional: only owner can delete)
+app.delete("/comments/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { uid } = req.query;
+
+    if (!uid) return res.status(400).json({ message: "uid required" });
+
+    const comment = await commentsCollection.findOne({ _id: new ObjectId(id) });
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    if (comment.uid !== uid) {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    await commentsCollection.deleteOne({ _id: new ObjectId(id) });
+    res.json({ message: "Deleted" });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- FAVORITES LESSONS (needed by MyFavorites page) -------------------- */
+// GET /favorites/lessons?uid=xxx
+app.get("/favorites/lessons", async (req, res) => {
+  try {
+    const { uid } = req.query;
+    if (!uid) return res.status(400).json({ message: "uid required" });
+
+    const favs = await favoritesCollection
+      .find({ uid })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    const ids = favs.map((f) => f.lessonId).filter(Boolean);
+
+    const lessons = await lessonsCollection
+      .find({ _id: { $in: ids.map((x) => new ObjectId(x)) } })
+      .toArray();
+
+    // keep order same as favorites
+    const map = new Map(lessons.map((l) => [String(l._id), l]));
+    const ordered = ids.map((id) => map.get(String(id))).filter(Boolean);
+
+    res.json(ordered);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- FEATURED LESSONS (Home page) -------------------- */
+// GET /lessons/featured
+app.get("/lessons/featured", async (req, res) => {
+  try {
+    const lessons = await lessonsCollection
+      .find({ visibility: "public", isFeatured: true })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .toArray();
+
+    res.json(lessons);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- MOST SAVED LESSONS (Home page) -------------------- */
+// GET /stats/most-saved
+app.get("/stats/most-saved", async (req, res) => {
+  try {
+    const rows = await favoritesCollection
+      .aggregate([
+        { $group: { _id: "$lessonId", favoritesCount: { $sum: 1 } } },
+        { $sort: { favoritesCount: -1 } },
+        { $limit: 6 },
+        {
+          $addFields: {
+            lessonObjId: {
+              $convert: { input: "$_id", to: "objectId", onError: null, onNull: null },
+            },
+          },
+        },
+        { $match: { lessonObjId: { $ne: null } } },
+        {
+          $lookup: {
+            from: "lessons",
+            localField: "lessonObjId",
+            foreignField: "_id",
+            as: "lesson",
+          },
+        },
+        { $unwind: "$lesson" },
+        { $match: { "lesson.visibility": "public" } },
+        {
+          $project: {
+            _id: "$lesson._id",
+            title: "$lesson.title",
+            description: "$lesson.description",
+            category: "$lesson.category",
+            tone: "$lesson.tone",
+            accessLevel: "$lesson.accessLevel",
+            photoUrl: "$lesson.photoUrl",
+            creator: "$lesson.creator",
+            createdAt: "$lesson.createdAt",
+            favoritesCount: 1,
+            likesCount: "$lesson.likesCount",
+          },
+        },
+      ])
+      .toArray();
+
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- TOP CONTRIBUTORS (Home page) -------------------- */
+// GET /stats/top-contributors
+// counts public lessons created in last 7 days
+app.get("/stats/top-contributors", async (req, res) => {
+  try {
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const rows = await lessonsCollection
+      .aggregate([
+        { $match: { visibility: "public", createdAt: { $gte: since } } },
+        {
+          $group: {
+            _id: "$creator.uid",
+            lessonsCount: { $sum: 1 },
+            name: { $first: "$creator.name" },
+            photoURL: { $first: "$creator.photoURL" },
+            email: { $first: "$creator.email" },
+          },
+        },
+        { $sort: { lessonsCount: -1 } },
+        { $limit: 6 },
+      ])
+      .toArray();
+
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- DASHBOARD SUMMARY -------------------- */
+// GET /dashboard/summary?uid=xxx
+app.get("/dashboard/summary", async (req, res) => {
+  try {
+    const { uid } = req.query;
+    if (!uid) return res.status(400).json({ message: "uid required" });
+
+    const user = await usersCollection.findOne({ uid });
+
+    const [myLessons, myPublicLessons, favorites, myLessonsDocs] = await Promise.all([
+      lessonsCollection.countDocuments({ "creator.uid": uid }),
+      lessonsCollection.countDocuments({ "creator.uid": uid, visibility: "public" }),
+      favoritesCollection.countDocuments({ uid }),
+      lessonsCollection.find({ "creator.uid": uid }).project({ likesCount: 1 }).toArray(),
+    ]);
+
+    const likes = myLessonsDocs.reduce((sum, x) => sum + (x.likesCount || 0), 0);
+
+    res.json({
+      user,
+      counts: {
+        myLessons,
+        publicLessons: myPublicLessons,
+        favorites,
+        likes,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+
+/* -------------------- Stripe Checkout -------------------- */
+app.post("/create-checkout-session", async (req, res) => {
+  try {
+    if (!usersCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const { uid, email } = req.body;
+    if (!uid || !email) return res.status(400).json({ message: "uid & email required" });
+
+    const user = await usersCollection.findOne({ uid });
+    if (!user) return res.status(404).json({ message: "User not found. Upsert first." });
+
+    if (user.isPremium) return res.status(400).json({ message: "Already premium" });
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      payment_method_types: ["card"],
+      customer_email: email,
+      line_items: [
+        {
+          price_data: {
+            currency: "bdt",
+            product_data: {
+              name: "Digital Life Lessons — Premium (Lifetime)",
+              description: "One-time payment for lifetime premium access.",
+            },
+            unit_amount: 1500 * 100,
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: { uid, email },
+      success_url: `${process.env.CLIENT_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}/payment/cancel`,
+    });
+
+    res.json({ url: session.url });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* Payment confirm endpoint */
+app.post("/payments/confirm", async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    if (!sessionId) return res.status(400).json({ message: "sessionId required" });
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    res.json({ ok: true, status: session.payment_status, id: session.id });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- Reports -------------------- */
+app.post("/lessonReports", async (req, res) => {
+  try {
+    if (!lessonReportsCollection) return res.status(503).json({ message: "DB not ready yet" });
+
+    const { lessonId, reporterUid, reporterEmail, reason } = req.body;
+
+    if (!lessonId || (!reporterUid && !reporterEmail) || !reason) {
+      return res.status(400).json({ message: "Missing report fields" });
+    }
+
+    await lessonReportsCollection.insertOne({
+      lessonId,
+      reporterUid: reporterUid || null,
+      reporterEmail: reporterEmail || null,
+      reason,
+      createdAt: new Date(),
+    });
+
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+});
+
+/* -------------------- Start Server -------------------- */
+app.listen(port, () => {
+  console.log(`✅ Server listening on port ${port}`);
+});

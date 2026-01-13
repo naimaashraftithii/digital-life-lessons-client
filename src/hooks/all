@@ -1,0 +1,5576 @@
+client side -1
+api-
+// src/api/admin.js
+import http from "./http";
+
+/* -------------------- USERS -------------------- */
+export const adminGetUsers = async () => {
+  const { data } = await http.get("/admin/users");
+  return data;
+};
+
+export const adminSetUserRole = async (uid, role) => {
+  const { data } = await http.patch("/admin/users/role", { uid, role });
+  return data;
+};
+
+export const adminDeleteUser = async (uid) => {
+  const { data } = await http.delete(`/admin/users/${uid}`);
+  return data;
+};
+
+/* -------------------- LESSONS -------------------- */
+export const adminGetLessons = async (params = {}) => {
+  const { data } = await http.get("/admin/lessons", { params });
+  return data;
+};
+
+export const adminToggleFeatured = async (id, value) => {
+  const { data } = await http.patch(`/admin/lessons/${id}/featured`, { value });
+  return data;
+};
+
+export const adminToggleReviewed = async (id, value) => {
+  const { data } = await http.patch(`/admin/lessons/${id}/reviewed`, { value });
+  return data;
+};
+
+export const adminDeleteLesson = async (id) => {
+  const { data } = await http.delete(`/admin/lessons/${id}`);
+  return data;
+};
+
+// ✅ Your ReportedLessons imports this name
+export const deleteLessonAdmin = adminDeleteLesson;
+
+/* -------------------- REPORTED LESSONS -------------------- */
+export const getReportedLessons = async () => {
+  const { data } = await http.get("/admin/reported-lessons");
+  return data;
+};
+
+export const ignoreReports = async (lessonId) => {
+  const { data } = await http.delete(`/admin/reported-lessons/${lessonId}`);
+  return data;
+};
+
+// src/api/client.js
+const API = import.meta.env.VITE_API_URL;
+
+export async function apiFetch(path, options = {}) {
+  const res = await fetch(`${API}${path}`, {
+    credentials: "include",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    },
+  });
+
+  const text = await res.text();
+
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text; // if server returns plain text
+  }
+
+  if (!res.ok) {
+    const msg = data?.message || "Request failed";
+    throw new Error(msg);
+  }
+
+  return data;
+}
+import { apiFetch } from "./client";
+
+export function getComments(lessonId) {
+  return apiFetch(`/comments?lessonId=${lessonId}`);
+}
+
+export function addComment(payload) {
+  return apiFetch("/comments", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteComment(commentId, uid) {
+  return apiFetch(`/comments/${commentId}?uid=${uid}`, {
+    method: "DELETE",
+  });
+}
+// src/api/dashboard.js
+import { apiFetch } from "./client";
+
+export function getDashboardSummary(uid) {
+  if (!uid) return Promise.resolve(null);
+  return apiFetch(`/dashboard/summary?uid=${encodeURIComponent(uid)}`);
+}
+import { apiFetch } from "./client";
+
+export function toggleFavorite(uid, lessonId) {
+  return apiFetch("/favorites/toggle", {
+    method: "POST",
+    body: JSON.stringify({ uid, lessonId }),
+  });
+}
+
+export function getFavoriteLessons(uid) {
+  return apiFetch(`/favorites/lessons?uid=${uid}`);
+}
+// src/api/home.js
+import { apiFetch } from "./client";
+
+export function getFeaturedLessons() {
+  return apiFetch("/lessons/featured");
+}
+
+export function getTopContributors() {
+  return apiFetch("/stats/top-contributors");
+}
+
+export function getMostSavedLessons() {
+  return apiFetch("/stats/most-saved");
+}
+// src/api/http.js
+// import axios from "axios";
+// import { getAuth } from "firebase/auth";
+
+// src/api/http.js
+import axios from "axios";
+
+const http = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export default http;
+// src/api/lessons.js
+import http from "./http";
+
+/* -------------------- LESSONS -------------------- */
+export async function createLesson(lesson) {
+  const { data } = await http.post("/lessons", lesson);
+  return data;
+}
+
+export async function getPublicLessons(params = {}) {
+  const { data } = await http.get("/lessons/public", { params });
+  // ✅ return ONLY lessons array for your UI
+  return data?.lessons || [];
+}
+
+export async function getLessonById(id) {
+  const { data } = await http.get(`/lessons/${id}`);
+  return data;
+}
+
+export async function getMyLessons(uid) {
+  if (!uid) return [];
+  const { data } = await http.get("/lessons/my", { params: { uid } });
+  return data;
+}
+
+export async function toggleLike(id, uid) {
+  const { data } = await http.patch(`/lessons/${id}/like`, { uid });
+  return data;
+}
+
+export async function getFavoritesCount(id) {
+  const { data } = await http.get(`/lessons/${id}/favorites-count`);
+  return data;
+}
+
+export async function getSimilarLessons(id) {
+  const { data } = await http.get(`/lessons/${id}/similar`);
+  return data;
+}
+// src/api/reports.js
+import { apiFetch } from "./client";
+
+export function reportLesson(payload) {
+  return apiFetch("/lessonReports", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+const API = import.meta.env.VITE_API_URL;
+
+export async function startCheckout({ uid, email }) {
+  const res = await fetch(`${API}/create-checkout-session`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ uid, email }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.message || "Checkout failed");
+
+  window.location.href = data.url;
+}
+// src/api/users.js
+import { apiFetch } from "./client";
+
+export async function upsertUser(firebaseUser) {
+  if (!firebaseUser?.uid || !firebaseUser?.email) return;
+
+  const payload = {
+    uid: firebaseUser.uid,
+    email: firebaseUser.email,
+    name: firebaseUser.displayName || "",
+    photoURL: firebaseUser.photoURL || "",
+  };
+
+  return apiFetch("/users/upsert", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// plan: GET /users/plan?uid=...
+export function getUserPlan(uid) {
+  if (!uid) return Promise.resolve(null);
+  return apiFetch(`/users/plan?uid=${encodeURIComponent(uid)}`);
+}
+const API = import.meta.env.VITE_API_URL;
+
+export async function getUserPlan(uid) {
+  if (!uid) return null;
+
+  const res = await fetch(`${API}/users/plan/${uid}`);
+  const data = await res.json();
+
+  if (!res.ok) throw new Error(data?.message || "Failed to load user plan");
+  return data; // { isPremium, role, user }
+}
+-----------------------------
+components-
+import { FaFacebook, FaTiktok, FaTwitter, FaYoutubeSquare } from "react-icons/fa";
+import { FaInstagram, FaXTwitter } from "react-icons/fa6";
+import { Link } from "react-router-dom";
+
+const Footer = () => {
+  const year = new Date().getFullYear();
+
+  return (
+    <footer className="mt-12 border-t border-[#1f2937] bg-[#030712] text-[#e5e7eb]">
+      <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-12 md:flex-row md:justify-between">
+
+        {/* Brand */}
+        <div className="max-w-sm">
+          <div className="mb-4 flex items-center gap-3">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl 
+              bg-[#f97316] text-white font-bold text-sm
+              transition-all duration-500 hover:scale-110">
+              DL
+            </span>
+
+            <span className="text-lg font-semibold tracking-wide text-white">
+              Digital Life Lessons
+            </span>
+          </div>
+
+          <p className="text-sm leading-relaxed text-[#9ca3af]">
+            A calm space to capture your life lessons, reflect on your journey,
+            and learn from others’ stories.
+          </p>
+        </div>
+
+        {/* Links */}
+        <div className="grid flex-1 gap-8 text-sm md:grid-cols-3">
+
+          {/* Explore */}
+          <div>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-[#9ca3af]">
+              Explore
+            </h3>
+            <ul className="space-y-3">
+              {[
+                { to: "/", label: "Home" },
+                { to: "/public-lessons", label: "Public Lessons" },
+                { to: "/dashboard", label: "Dashboard" },
+              ].map(({ to, label }) => (
+                <li key={label}>
+                  <Link
+                    to={to}
+                    className="transition-colors duration-300 hover:text-[#22c55e]"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Legal */}
+          <div>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-[#9ca3af]">
+              Legal
+            </h3>
+            <ul className="space-y-3">
+              <li className="text-[#6b7280] cursor-not-allowed">
+                Terms &amp; Conditions
+              </li>
+              <li className="text-[#6b7280] cursor-not-allowed">
+                Privacy Policy
+              </li>
+            </ul>
+          </div>
+
+          {/* Connect */}
+          <div>
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-widest text-[#9ca3af]">
+              Connect
+            </h3>
+
+            <a
+              href="mailto:support@digitallifelessons.com"
+              className="mb-4 block text-sm text-[#9ca3af]
+              transition-colors duration-300 hover:text-white"
+            >
+              support@digitallifelessons.com
+            </a>
+
+            {/* Social Icons */}
+            <div className="flex items-center gap-4 text-xl">
+              <a
+                href="https://www.facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white transition-all duration-300 hover:scale-125 hover:-translate-y-1 hover:text-[#1877F2]"
+              >
+                <FaFacebook />
+              </a>
+
+              <a
+                href="https://www.twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white transition-all duration-300 hover:scale-125 hover:-translate-y-1 hover:text-[#1DA1F2]"
+              >
+                <FaTwitter />
+              </a>
+
+              <a
+                href="https://www.x.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white transition-all duration-300 hover:scale-125 hover:-translate-y-1 hover:text-[#9CA3AF]"
+              >
+                <FaXTwitter />
+              </a>
+
+              <a
+                href="https://www.instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white transition-all duration-300 hover:scale-125 hover:-translate-y-1 hover:text-[#E1306C]"
+              >
+                <FaInstagram />
+              </a>
+
+              <a
+                href="https://www.tiktok.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white transition-all duration-300 hover:scale-125 hover:-translate-y-1 hover:text-[#69C9D0]"
+              >
+                <FaTiktok />
+              </a>
+
+              <a
+                href="https://www.youtube.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-white transition-all duration-300 hover:scale-125 hover:-translate-y-1 hover:text-[#FF0000]"
+              >
+                <FaYoutubeSquare />
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom */}
+      <div className="border-t border-[#1f2937]">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-center text-xs text-[#6b7280] md:flex-row md:justify-between">
+          <p>© {year} Digital Life Lessons. All rights reserved.</p>
+          <p className="transition-colors duration-300 hover:text-[#22c55e]">
+            Built for mindful reflection ✨
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;
+const gradients = {
+  bluePink: "linear-gradient(90deg, #3494e6, #ec6ead)",
+  greenBlue: "linear-gradient(90deg, #67b26f, #4ca2cd)",
+  pinkRed: "linear-gradient(90deg, #ec008c, #fc6767)",
+};
+
+const GradientButton = ({
+  children,
+  variant = "bluePink",
+  className = "",
+  ...props
+}) => {
+  return (
+    <button
+      {...props}
+      style={{
+        background: gradients[variant],
+      }}
+      className={`
+        text-white
+        font-semibold
+        px-5 py-2.5
+        rounded-xl
+        transition-all duration-300
+        hover:scale-[1.03] active:scale-95
+        shadow-md hover:shadow-lg
+        bg-cover bg-center
+        ${className}
+      `}
+    >
+      {children}
+    </button>
+  );
+};
+
+export default GradientButton;
+import Lottie from "lottie-react";
+import loadingAnim from "../assets/Sandy Loading.json";
+
+const LottieLoader = () => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/35 backdrop-blur">
+      <div className="flex flex-col items-center">
+        {/* Lottie */}
+        <div className="w-40 sm:w-52">
+          <Lottie animationData={loadingAnim} loop />
+        </div>
+
+        {/* Text */}
+        <h1 className="mt-2 text-center text-3xl sm:text-4xl font-extrabold text-neutral-900 tracking-wide animate-bounce">
+          Loading<span className="animate-pulse">....!!!</span>
+        </h1>
+
+        <p className="mt-1 text-xs sm:text-sm text-slate-600 animate-pulse">
+          Please wait a moment
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default LottieLoader;
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import useAuth from "../hooks/useAuth";
+import useUserPlan from "../hooks/useUserPlan";
+import GradientButton from "./GradientButton";
+
+const Navbar = () => {
+  const { user, logOut } = useAuth();
+  const navigate = useNavigate();
+
+  const { plan } = useUserPlan(user?.uid);
+  const isPremium = !!plan?.isPremium;
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [dropOpen, setDropOpen] = useState(false);
+
+  const dropdownRef = useRef(null);
+
+  const navLinkClass = ({ isActive }) =>
+    `rounded-xl px-3 py-2 text-sm font-semibold transition ${
+      isActive
+        ? "bg-white/70 text-slate-900 shadow-sm"
+        : "text-slate-700 hover:bg-white/50"
+    }`;
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logOut();
+      toast.success("Logged out!");
+      setDropOpen(false);
+      setMobileOpen(false);
+      navigate("/");
+    } catch (err) {
+      toast.error(err?.message || "Logout failed");
+    }
+  };
+
+  const renderNavItems = () => (
+    <>
+      <NavLink to="/" className={navLinkClass} onClick={() => setMobileOpen(false)}>
+        Home
+      </NavLink>
+
+      <NavLink
+        to="/public-lessons"
+        className={navLinkClass}
+        onClick={() => setMobileOpen(false)}
+      >
+        Public Lessons
+      </NavLink>
+
+      {user && (
+        <>
+          <NavLink
+            to="/dashboard/add-lesson"
+            className={navLinkClass}
+            onClick={() => setMobileOpen(false)}
+          >
+            Add Lesson
+          </NavLink>
+
+          <NavLink
+            to="/dashboard/my-lessons"
+            className={navLinkClass}
+            onClick={() => setMobileOpen(false)}
+          >
+            My Lessons
+          </NavLink>
+
+          {!isPremium && (
+            <NavLink
+              to="/pricing"
+              className={navLinkClass}
+              onClick={() => setMobileOpen(false)}
+            >
+              Pricing
+            </NavLink>
+          )}
+
+          {isPremium && (
+            <span className="rounded-xl bg-amber-100 px-3 py-2 text-xs font-bold text-amber-700">
+              Premium ⭐
+            </span>
+          )}
+        </>
+      )}
+    </>
+  );
+
+  return (
+    <header className="sticky top-0 z-50 border-b border-white/30 bg-white/30 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <Link to="/" className="flex items-center gap-2" onClick={() => setMobileOpen(false)}>
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/70 text-slate-900 font-extrabold shadow-sm">
+            DL
+          </div>
+          <div className="leading-tight">
+            <p className="text-base font-bold text-slate-900">Digital Life Lessons</p>
+            <p className="text-xs text-slate-600">Capture. Reflect. Grow.</p>
+          </div>
+        </Link>
+
+        <nav className="hidden items-center gap-1 md:flex">{renderNavItems()}</nav>
+
+        <div className="flex items-center gap-2">
+          {!user && (
+            <div className="hidden items-center gap-2 md:flex">
+              <Link to="/login">
+                <GradientButton variant="greenBlue" className="px-4 py-2 text-sm">
+                  Login
+                </GradientButton>
+              </Link>
+              <Link to="/register">
+                <GradientButton variant="bluePink" className="px-4 py-2 text-sm">
+                  Sign up
+                </GradientButton>
+              </Link>
+            </div>
+          )}
+
+          {user && (
+            <div className="relative" ref={dropdownRef}>
+              <button
+                onClick={() => setDropOpen((v) => !v)}
+                className="flex items-center gap-2 rounded-2xl bg-white/60 px-2 py-1 shadow-sm hover:bg-white/70"
+              >
+                <img
+                  src={user.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
+                  alt="User"
+                  className="h-9 w-9 rounded-2xl object-cover"
+                />
+                <span className="hidden text-sm font-semibold text-slate-800 md:inline">
+                  {user.displayName || "User"}
+                </span>
+              </button>
+
+              {dropOpen && (
+                <div className="absolute right-0 mt-2 w-56 overflow-hidden rounded-2xl border border-white/40 bg-white/80 shadow-lg backdrop-blur">
+                  <div className="px-4 py-3">
+                    <p className="text-sm font-bold text-slate-900">
+                      {user.displayName || "Anonymous"}
+                    </p>
+                    <p className="text-xs text-slate-600">{user.email}</p>
+                  </div>
+
+                  <div className="h-px bg-slate-200/70" />
+
+                  <div className="p-2">
+                    <Link
+                      to="/dashboard/profile"
+                      onClick={() => setDropOpen(false)}
+                      className="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      Profile
+                    </Link>
+
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setDropOpen(false)}
+                      className="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      Dashboard
+                    </Link>
+
+                    {!isPremium && (
+                      <Link
+                        to="/pricing"
+                        onClick={() => setDropOpen(false)}
+                        className="mt-1 block rounded-xl px-3 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
+                      >
+                        Upgrade
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={handleLogout}
+                      className="mt-1 w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50"
+                    >
+                      Log out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={() => setMobileOpen((v) => !v)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/60 shadow-sm md:hidden"
+            aria-label="Open menu"
+          >
+            ☰
+          </button>
+        </div>
+      </div>
+
+      {mobileOpen && (
+        <div className="border-t border-white/30 bg-white/30 backdrop-blur md:hidden">
+          <div className="mx-auto max-w-6xl px-4 py-3">
+            <div className="flex flex-col gap-2">
+              {renderNavItems()}
+
+              {!user && (
+                <div className="mt-2 flex gap-2">
+                  <Link to="/login" className="flex-1" onClick={() => setMobileOpen(false)}>
+                    <GradientButton variant="greenBlue" className="w-full">
+                      Login
+                    </GradientButton>
+                  </Link>
+
+                  <Link to="/register" className="flex-1" onClick={() => setMobileOpen(false)}>
+                    <GradientButton variant="bluePink" className="w-full">
+                      Sign up
+                    </GradientButton>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+};
+
+export default Navbar;
+-----------------------------------------------------------------------------
+context-
+import { createContext } from "react";
+
+export const AuthContext = createContext(null);
+
+import { useEffect, useMemo, useState } from "react";
+import { upsertUser } from "../api/users";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut,
+  updateProfile,
+} from "firebase/auth";
+
+import { app } from "../firebase/firebase.config";
+import { AuthContext } from "./AuthContext";
+
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Register 
+  const createUser = (email, password) => {
+    setLoading(true);
+    return createUserWithEmailAndPassword(auth, email, password);
+  };
+
+  // Login 
+  const signIn = (email, password) => {
+    setLoading(true);
+    return signInWithEmailAndPassword(auth, email, password);
+  };
+
+  // Google login
+  const googleSignIn = () => {
+    setLoading(true);
+    return signInWithPopup(auth, googleProvider);
+  };
+
+  // Logout
+  const logOut = () => {
+    setLoading(true);
+    return signOut(auth);
+  };
+
+  // Update profile
+  const updateUserProfile = async (name, photoURL) => {
+    await updateProfile(auth.currentUser, { displayName: name, photoURL });
+  
+    setUser((prev) =>
+      prev ? { ...prev, displayName: name, photoURL } : prev
+    );
+  };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+
+      //  Upsert user in MongoDB 
+      if (currentUser?.uid && currentUser?.email) {
+        try {
+          await upsertUser(currentUser);
+        } catch (e) {
+          console.log("Upsert error:", e.message);
+        }
+      }
+
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const authInfo = useMemo(
+    () => ({
+      user,
+      loading,
+      createUser,
+      signIn,
+      googleSignIn,
+      logOut,
+      updateUserProfile,
+    }),
+    [user, loading]
+  );
+
+  return (
+    <AuthContext.Provider value={authInfo}>{children}</AuthContext.Provider>
+  );
+};
+
+export default AuthProvider;
+-------------------------------------------
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
+
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+---------------------------------------
+hooks-
+import { useContext } from "react";
+import { AuthContext } from "../context/AuthContext.jsx";
+
+const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+export default useAuth;
+import { useEffect, useState } from "react";
+
+const API = import.meta.env.VITE_API_URL;
+
+export default function useDashboardSummary(uid) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!uid) {
+      setData(null);
+      setLoading(false);
+      setError("");
+      return;
+    }
+
+    let ignore = false;
+
+    (async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const res = await fetch(`${API}/dashboard/summary?uid=${uid}`);
+        const json = await res.json();
+
+        if (!res.ok) {
+          throw new Error(json?.message || "Failed to load dashboard summary");
+        }
+
+        if (!ignore) setData(json);
+      } catch (e) {
+        if (!ignore) setError(e.message || "Something went wrong");
+        if (!ignore) setData(null);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, [uid]);
+
+  return { data, loading, error };
+}
+import { useEffect, useState } from "react";
+import { getUserPlan } from "../api/usersPlan";
+
+export default function useUserPlan(uid) {
+  const [plan, setPlan] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!uid) {
+      setPlan(null);
+      setLoading(false);
+      return;
+    }
+
+    let ignore = false;
+
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getUserPlan(uid);
+        if (!ignore) setPlan(data);
+      } catch {
+        if (!ignore) setPlan(null);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, [uid]);
+
+  return { plan, loading };
+}
+------------------------------
+layout-
+import { Outlet, Link } from "react-router-dom";
+
+const AuthLayout = () => {
+  return (
+    <div className="min-h-screen w-full bg-[radial-gradient(1200px_600px_at_10%_10%,rgba(99,102,241,.25),transparent),radial-gradient(1200px_600px_at_90%_20%,rgba(236,72,153,.18),transparent),linear-gradient(180deg,#f8fafc,white)]">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        {/* top */}
+        <div className="flex items-center justify-between">
+          <Link to="/" className="text-sm font-extrabold text-indigo-600 hover:underline">
+            ← Back to Home
+          </Link>
+
+          {/* top-bottom */}
+          <Link to="/" className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80 font-extrabold text-slate-900 shadow-sm">
+              DL
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-extrabold text-slate-900">Digital Life Lessons</p>
+              <p className="text-[11px] font-semibold text-slate-600">Capture. Reflect. Grow.</p>
+            </div>
+          </Link>
+        </div>
+
+        {/* layout */}
+        <div className="mt-8 grid gap-6 lg:grid-cols-2 lg:items-stretch">
+          {/* left*/}
+          <div className="hidden overflow-hidden rounded-4xl bg-white/70 shadow-sm backdrop-blur lg:block">
+            <div className="relative h-full min-h-[520px]">
+              <img
+                src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80"
+                alt="Learning"
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
+              <div className="absolute inset-0 bg-gradient-to-tr from-black/35 via-transparent to-transparent" />
+              <div className="absolute bottom-6 left-6 right-6 rounded-3xl bg-white/70 p-5 shadow-sm backdrop-blur">
+                <p className="text-sm font-extrabold text-slate-900">
+                  Save your life lessons—before they fade.
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-600">
+                  Reflect privately or share publicly with the community.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* form */}
+          <div className="rounded-4xl bg-white/75 p-6 shadow-sm backdrop-blur sm:p-8">
+            <Outlet />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AuthLayout;
+import { Outlet } from "react-router-dom";
+
+export default function DashboardLayout() {
+  return (
+    <div className="min-h-[calc(100vh-80px)] bg-slate-50">
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <Outlet />
+      </div>
+    </div>
+  );
+}
+import { Outlet } from "react-router-dom";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+
+const MainLayout = () => {
+  return (
+    <div className="flex min-h-screen flex-col bg-slate-50">
+      <Navbar />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default MainLayout;
+------------------------------------------
+pages------
+Auth---------
+login-------------
+import { useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+
+
+import { toast } from "react-toastify";
+import useAuth from "../../../hooks/useAuth";
+import GradientButton from "../../../components/GradientButton";
+
+const Login = () => {
+  const { signIn, googleSignIn } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = location.state?.from?.pathname || "/dashboard";
+
+  const [showPass, setShowPass] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+
+    const email = form.email.value.trim();
+    const password = form.password.value;
+
+    if (!email || !password) {
+      toast.error("Give Both Email And Password ");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await signIn(email, password);
+      toast.success("Login successful!");
+      navigate(from, { replace: true });
+    } catch (err) {
+      toast.error(err?.message || "Login failed. Try Again");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setSubmitting(true);
+      await googleSignIn();
+      toast.success("Google login successful!");
+      navigate(from, { replace: true });
+    } catch (err) {
+      toast.error(err?.message || "Google login failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div>
+      {/*  heading style */}
+      <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
+        Welcome back
+      </h2>
+      <p className="mt-2 text-sm font-semibold text-slate-600">
+        Login and go life lessons 
+      </p>
+
+      <form onSubmit={handleLogin} className="mt-6 space-y-4">
+        <div>
+          <label className="text-sm font-extrabold text-slate-800">Email</label>
+          <input
+            name="email"
+            type="email"
+            placeholder="your@email.com"
+            className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-900 outline-none shadow-sm focus:border-indigo-400"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-extrabold text-slate-800">Password</label>
+          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-white/60 bg-white/70 px-4 py-3 shadow-sm focus-within:border-indigo-400">
+            <input
+              name="password"
+              type={showPass ? "text" : "password"}
+              placeholder="••••••"
+              className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass((v) => !v)}
+              className="text-xs font-extrabold text-slate-600 hover:text-slate-900"
+            >
+              {showPass ? "Hide" : "Show"}
+            </button>
+          </div>
+        </div>
+
+        {/* button  */}
+        <GradientButton
+          type="submit"
+          variant="bluePink"
+          disabled={submitting}
+          className="w-full py-3"
+        >
+          {submitting ? "Logging in..." : "Login"}
+        </GradientButton>
+      </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs font-extrabold text-slate-500">OR</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
+      <GradientButton
+        type="button"
+        variant="greenBlue"
+        disabled={submitting}
+        onClick={handleGoogleLogin}
+        className="w-full py-3"
+      >
+        Continue with Google
+      </GradientButton>
+
+      <p className="mt-6 text-sm font-semibold text-slate-600">
+      Are you New here ?{" "}
+        <Link to="/register" className="font-extrabold text-indigo-600 hover:underline">
+          Create an account
+        </Link>
+      </p>
+    </div>
+  );
+};
+
+export default Login;
+Register-------------------
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import useAuth from "../../../hooks/useAuth";
+import GradientButton from "../../../components/GradientButton";
+
+const hasUpper = (str) => /[A-Z]/.test(str);
+const hasLower = (str) => /[a-z]/.test(str);
+
+const Register = () => {
+  const { createUser, updateUserProfile, googleSignIn } = useAuth();
+  const navigate = useNavigate();
+
+  const [submitting, setSubmitting] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+
+    const name = form.name.value.trim();
+    const photoURL = form.photoURL.value.trim();
+    const email = form.email.value.trim();
+    const password = form.password.value;
+
+    if (!name || !email || !password) {
+      toast.error("Name, Email, Password অবশ্যই দিতে হবে");
+      return;
+    }
+    if (password.length < 6) {
+      toast.error("Password কমপক্ষে 6 অক্ষরের হতে হবে");
+      return;
+    }
+    if (!hasUpper(password)) {
+      toast.error("Password এ অন্তত ১টি Uppercase letter থাকতে হবে");
+      return;
+    }
+    if (!hasLower(password)) {
+      toast.error("Password এ অন্তত ১টি Lowercase letter থাকতে হবে");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await createUser(email, password);
+      await updateUserProfile(name, photoURL);
+      toast.success("Account created successfully!");
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      toast.error(err?.message || "Registration failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    try {
+      setSubmitting(true);
+      await googleSignIn();
+      toast.success("Google signup successful!");
+      navigate("/dashboard", { replace: true });
+    } catch (err) {
+      toast.error(err?.message || "Google signup failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
+        Create account
+      </h2>
+      <p className="mt-2 text-sm font-semibold text-slate-600">
+        Create Your Profile and write start lessons
+      </p>
+
+      <form onSubmit={handleRegister} className="mt-6 space-y-4">
+        <div>
+          <label className="text-sm font-extrabold text-slate-800">Name</label>
+          <input
+            name="name"
+            type="text"
+            placeholder="Your name"
+            className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-900 outline-none shadow-sm focus:border-indigo-400"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-extrabold text-slate-800">Photo URL</label>
+          <input
+            name="photoURL"
+            type="url"
+            placeholder="https://..."
+            className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-900 outline-none shadow-sm focus:border-indigo-400"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-extrabold text-slate-800">Email</label>
+          <input
+            name="email"
+            type="email"
+            placeholder="your@email.com"
+            className="mt-2 w-full rounded-2xl border border-white/60 bg-white/70 px-4 py-3 text-sm font-semibold text-slate-900 outline-none shadow-sm focus:border-indigo-400"
+          />
+        </div>
+
+        <div>
+          <label className="text-sm font-extrabold text-slate-800">Password</label>
+          <div className="mt-2 flex items-center gap-2 rounded-2xl border border-white/60 bg-white/70 px-4 py-3 shadow-sm focus-within:border-indigo-400">
+            <input
+              name="password"
+              type={showPass ? "text" : "password"}
+              placeholder="Min 6 chars, Upper+Lower"
+              className="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass((v) => !v)}
+              className="text-xs font-extrabold text-slate-600 hover:text-slate-900"
+            >
+              {showPass ? "Hide" : "Show"}
+            </button>
+          </div>
+
+          <p className="mt-2 text-xs font-semibold text-slate-500">
+            Password rules: 6+ characters, 1 Uppercase, 1 Lowercase.
+          </p>
+        </div>
+
+        <GradientButton
+          type="submit"
+          variant="pinkRed"
+          disabled={submitting}
+          className="w-full py-3"
+        >
+          {submitting ? "Creating..." : "Sign up"}
+        </GradientButton>
+      </form>
+
+      <div className="my-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-slate-200" />
+        <span className="text-xs font-extrabold text-slate-500">OR</span>
+        <div className="h-px flex-1 bg-slate-200" />
+      </div>
+
+      <GradientButton
+        type="button"
+        variant="greenBlue"
+        disabled={submitting}
+        onClick={handleGoogleRegister}
+        className="w-full py-3"
+      >
+        Continue with Google
+      </GradientButton>
+
+      <p className="mt-6 text-sm font-semibold text-slate-600">
+        Already have an account?{" "}
+        <Link to="/login" className="font-extrabold text-indigo-600 hover:underline">
+          Login
+        </Link>
+      </p>
+    </div>
+  );
+};
+
+export default Register;
+-----------------------------------------------
+clientside-2
+Dashboard--
+import { useState } from "react";
+import { toast } from "react-toastify";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import { createLesson } from "../../api/lessons";
+import { Link, useNavigate } from "react-router-dom";
+import LottieLoader from "../../components/LottieLoader";
+
+export default function AddLesson() {
+  const { user } = useAuth();
+  const { plan, loading } = useUserPlan(user?.uid);
+  const isPremium = !!plan?.isPremium;
+  const navigate = useNavigate();
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Personal Growth");
+  const [tone, setTone] = useState("Motivational");
+  const [visibility, setVisibility] = useState("public");
+  const [accessLevel, setAccessLevel] = useState("free");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  if (loading) return <LottieLoader title="Loading..." />;
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!user?.uid) {
+      toast.error("Please login first");
+      return;
+    }
+
+    if (accessLevel === "premium" && !isPremium) {
+      toast.error("Upgrade to Premium to create premium lessons");
+      return;
+    }
+
+    const payload = {
+      title,
+      description,
+      category,
+      tone,
+      visibility,
+      accessLevel: isPremium ? accessLevel : "free",
+      photoUrl: photoUrl || "",
+      creator: {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || "",
+        photoURL: user.photoURL || "",
+      },
+    };
+
+    try {
+      setSaving(true);
+      await createLesson(payload);
+      toast.success("Lesson added successfully ✅");
+      navigate("/dashboard/my-lessons");
+    } catch (err) {
+      toast.error(err?.message || "Failed to create lesson");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-extrabold text-slate-900">Add New Lesson</h1>
+
+        {!isPremium && (
+          <Link
+            to="/pricing"
+            className="rounded-xl bg-amber-100 px-4 py-2 text-sm font-extrabold text-amber-800"
+            title="Upgrade to create premium lessons"
+          >
+            Upgrade to Premium ⭐
+          </Link>
+        )}
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <input
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Lesson Title"
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+
+        <textarea
+          required
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={6}
+          placeholder="Full Description / Story / Insight"
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+
+        <input
+          value={photoUrl}
+          onChange={(e) => setPhotoUrl(e.target.value)}
+          placeholder="Image URL (optional) e.g. https://..."
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+
+        {photoUrl && (
+          <div className="overflow-hidden rounded-2xl border bg-slate-50">
+            <img
+              src={photoUrl}
+              alt="Preview"
+              className="h-44 w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                toast.error("Invalid image URL");
+              }}
+            />
+          </div>
+        )}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option>Personal Growth</option>
+              <option>Career</option>
+              <option>Relationships</option>
+              <option>Mindset</option>
+              <option>Mistakes Learned</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Emotional Tone</label>
+            <select
+              value={tone}
+              onChange={(e) => setTone(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option>Motivational</option>
+              <option>Sad</option>
+              <option>Realization</option>
+              <option>Gratitude</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Privacy</label>
+            <select
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option value="public">Public</option>
+              <option value="private">Private</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Access Level</label>
+            <select
+              value={accessLevel}
+              onChange={(e) => setAccessLevel(e.target.value)}
+              disabled={!isPremium}
+              title={!isPremium ? "Upgrade to Premium to create paid lessons" : ""}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:bg-slate-100"
+            >
+              <option value="free">Free</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+        </div>
+
+        {!isPremium && (
+          <div className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
+            “Premium” is disabled for Free users. Upgrade to Premium to create paid lessons.
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-xl bg-slate-900 px-6 py-2 text-sm font-extrabold text-white disabled:opacity-60"
+        >
+          {saving ? "Saving..." : "Save Lesson"}
+        </button>
+      </form>
+    </div>
+  );
+}
+import { Outlet } from "react-router-dom";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import LottieLoader from "../../components/LottieLoader";
+
+export default function Admin() {
+  const { user } = useAuth();
+  const { plan, loading } = useUserPlan(user?.uid);
+
+  if (loading) return <LottieLoader />;
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100">
+        <h1 className="text-xl font-extrabold text-slate-900">Admin Panel</h1>
+        <p className="mt-1 text-sm font-semibold text-slate-600">
+          Welcome,{" "}
+          <span className="font-extrabold text-slate-900">
+            {plan?.user?.name || user?.displayName || "Admin"}
+          </span>
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white">
+            Role: {plan?.role || "admin"}
+          </span>
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
+            Premium: {plan?.isPremium ? "YES" : "NO"}
+          </span>
+        </div>
+      </div>
+
+      <Outlet />
+    </div>
+  );
+}
+export default function AdminHome() {
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-extrabold text-slate-900">Admin Overview</h2>
+      <p className="mt-2 text-slate-600">Platform analytics will be here.</p>
+    </div>
+  );
+}
+import { useMemo, useState } from "react";
+import Swal from "sweetalert2";
+import { toast } from "react-toastify";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import LottieLoader from "../../components/LottieLoader";
+
+export default function AdminProfile() {
+  const { user } = useAuth();
+  const { plan, loading } = useUserPlan(user?.uid);
+
+  const [name, setName] = useState(user?.displayName || "");
+  const [photo, setPhoto] = useState(user?.photoURL || "");
+
+  const email = useMemo(
+    () => user?.email || plan?.user?.email || "",
+    [user, plan]
+  );
+
+  if (loading) return <LottieLoader />;
+
+  const onSave = async () => {
+    Swal.fire({
+      icon: "info",
+      title: "Profile update",
+      text: "Optional: update Firebase profile. For assignment, UI is enough.",
+      confirmButtonText: "Ok",
+    });
+    toast.success("Admin profile screen ready ✅");
+  };
+
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+      <h2 className="text-lg font-extrabold text-slate-900">Admin Profile</h2>
+      <p className="mt-1 text-sm font-semibold text-slate-600">
+        Manage your admin profile details.
+      </p>
+
+      <div className="mt-6 grid gap-5 md:grid-cols-[140px_1fr]">
+        <div className="flex flex-col items-center gap-3">
+          <img
+            src={photo || "https://i.ibb.co/ZxK3f6K/user.png"}
+            alt="admin"
+            className="h-28 w-28 rounded-3xl object-cover ring-2 ring-slate-100"
+          />
+          <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white">
+            Admin ✅
+          </span>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-extrabold text-slate-700">Name</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+              placeholder="Admin name"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-extrabold text-slate-700">Email</label>
+            <input
+              value={email}
+              readOnly
+              className="mt-1 w-full rounded-xl border bg-slate-50 px-4 py-2 text-sm font-semibold"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-extrabold text-slate-700">Photo URL</label>
+            <input
+              value={photo}
+              onChange={(e) => setPhoto(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+              placeholder="https://..."
+            />
+          </div>
+
+          <button
+            onClick={onSave}
+            className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-extrabold text-white"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import useAuth from "../../hooks/useAuth";
+import useDashboardSummary from "../../hooks/useDashboardSummary";
+import GradientButton from "../../components/GradientButton";
+
+const HoverCard = ({ children, className = "" }) => (
+  <motion.div
+    whileHover={{ y: -4, scale: 1.01 }}
+    whileTap={{ scale: 0.99 }}
+    transition={{ type: "spring", stiffness: 260, damping: 18 }}
+    className={`rounded-3xl bg-white/70 p-5 shadow-sm backdrop-blur border border-white/40 ${className}`}
+  >
+    {children}
+  </motion.div>
+);
+
+export default function DashboardHome() {
+  const { user } = useAuth();
+  const { summary, loading, error } = useDashboardSummary(user?.uid);
+
+  const isPremium = !!summary?.user?.isPremium;
+  const counts = summary?.counts || { myLessons: 0, publicLessons: 0, favorites: 0, likes: 0 };
+
+  if (loading) {
+    return (
+      <div className="rounded-3xl bg-white/60 p-6 shadow-sm">
+        <p className="text-sm font-extrabold text-slate-700">Loading dashboard...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-3xl bg-white/60 p-6 shadow-sm">
+        <p className="text-sm font-extrabold text-rose-600">{error}</p>
+        <p className="mt-2 text-xs font-semibold text-slate-600">
+          Check backend + VITE_API_URL + ensure user is saved to MongoDB (upsert).
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <HoverCard>
+          <p className="text-xs font-extrabold text-slate-500">Lessons</p>
+          <p className="mt-1 text-3xl font-extrabold text-slate-900">{counts.myLessons}</p>
+          <Link className="mt-3 inline-block text-sm font-extrabold text-indigo-600 hover:underline" to="/dashboard/my-lessons">
+            View →
+          </Link>
+        </HoverCard>
+
+        <HoverCard>
+          <p className="text-xs font-extrabold text-slate-500">Public Lessons</p>
+          <p className="mt-1 text-3xl font-extrabold text-slate-900">{counts.publicLessons}</p>
+          <Link className="mt-3 inline-block text-sm font-extrabold text-indigo-600 hover:underline" to="/public-lessons">
+            Explore →
+          </Link>
+        </HoverCard>
+
+        <HoverCard>
+          <p className="text-xs font-extrabold text-slate-500">Saved</p>
+          <p className="mt-1 text-3xl font-extrabold text-slate-900">{counts.favorites}</p>
+          <Link className="mt-3 inline-block text-sm font-extrabold text-indigo-600 hover:underline" to="/dashboard/my-favorites">
+            View →
+          </Link>
+        </HoverCard>
+
+        <HoverCard>
+          <p className="text-xs font-extrabold text-slate-500">Likes</p>
+          <p className="mt-1 text-3xl font-extrabold text-slate-900">{counts.likes}</p>
+          <p className="mt-3 text-sm font-semibold text-slate-600">Across your lessons</p>
+        </HoverCard>
+      </div>
+
+      <HoverCard className="p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-extrabold text-slate-500">Premium Status</p>
+            <p className="mt-1 text-2xl font-extrabold text-slate-900">{isPremium ? "YES ⭐" : "NO"}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-600">
+              {isPremium ? "You can create premium lessons & view premium lessons." : "Upgrade to unlock premium access."}
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Link to="/dashboard/add-lesson">
+              <GradientButton className="w-full sm:w-auto">+ Add Lesson</GradientButton>
+            </Link>
+
+            {!isPremium && (
+              <Link to="/pricing">
+                <GradientButton variant="pinkRed" className="w-full sm:w-auto">
+                  Upgrade
+                </GradientButton>
+              </Link>
+            )}
+          </div>
+        </div>
+      </HoverCard>
+    </div>
+  );
+}
+import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
+import { toast } from "react-toastify";
+import LottieLoader from "../../components/LottieLoader";
+import {
+  adminDeleteLesson,
+  adminGetLessons,
+  adminToggleFeatured,
+  adminToggleReviewed,
+} from "../../api/admin";
+
+export default function ManageLessons() {
+  const [lessons, setLessons] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState("");
+  const [visibility, setVisibility] = useState("");
+  const [accessLevel, setAccessLevel] = useState("");
+  const [featured, setFeatured] = useState("");
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data = await adminGetLessons({ search, visibility, accessLevel, featured });
+      setLessons(Array.isArray(data) ? data : []);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+ 
+  }, []);
+
+  const filteredCount = useMemo(() => lessons.length, [lessons]);
+
+  const toggleFeatured = async (id, current) => {
+    try {
+      await adminToggleFeatured(id, !current);
+      toast.success(!current ? "Marked as Featured ✅" : "Removed Featured ✅");
+      await load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  const toggleReviewed = async (id, current) => {
+    try {
+      await adminToggleReviewed(id, !current);
+      toast.success(!current ? "Marked Reviewed ✅" : "Unreviewed ✅");
+      await load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  const removeLesson = async (id) => {
+    const ok = await Swal.fire({
+      icon: "warning",
+      title: "Delete lesson?",
+      text: "This will permanently delete the lesson.",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+    });
+
+    if (!ok.isConfirmed) return;
+
+    try {
+      await adminDeleteLesson(id);
+      toast.success("Lesson deleted ✅");
+      await load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  if (loading) return <LottieLoader />;
+
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-extrabold text-slate-900">Manage Lessons</h2>
+          <p className="mt-1 text-sm font-semibold text-slate-600">
+            Feature lessons for home page, mark reviewed, and delete inappropriate content.
+          </p>
+          <p className="mt-1 text-xs font-extrabold text-slate-500">
+            Showing: {filteredCount}
+          </p>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="mt-5 grid gap-3 md:grid-cols-4">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search title/description..."
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+
+        <select
+          value={visibility}
+          onChange={(e) => setVisibility(e.target.value)}
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        >
+          <option value="">All visibility</option>
+          <option value="public">Public</option>
+          <option value="private">Private</option>
+        </select>
+
+        <select
+          value={accessLevel}
+          onChange={(e) => setAccessLevel(e.target.value)}
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        >
+          <option value="">All access</option>
+          <option value="free">Free</option>
+          <option value="premium">Premium</option>
+        </select>
+
+        <select
+          value={featured}
+          onChange={(e) => setFeatured(e.target.value)}
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        >
+          <option value="">Featured: all</option>
+          <option value="true">Featured only</option>
+          <option value="false">Not featured</option>
+        </select>
+      </div>
+
+      <button
+        onClick={load}
+        className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white"
+      >
+        Apply Filters
+      </button>
+
+      {/* Table */}
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-[1100px] w-full text-left text-sm">
+          <thead>
+            <tr className="border-b text-xs font-extrabold uppercase text-slate-600">
+              <th className="py-3 pr-3">Title</th>
+              <th className="py-3 pr-3">Creator</th>
+              <th className="py-3 pr-3">Visibility</th>
+              <th className="py-3 pr-3">Access</th>
+              <th className="py-3 pr-3">Featured</th>
+              <th className="py-3 pr-3">Reviewed</th>
+              <th className="py-3 pr-3">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {lessons.map((l) => {
+              const id = l._id;
+              return (
+                <tr key={id} className="border-b last:border-0">
+                  <td className="py-3 pr-3">
+                    <p className="font-extrabold text-slate-900">{l.title}</p>
+                    <p className="text-xs font-semibold text-slate-500 line-clamp-1">
+                      {l.description}
+                    </p>
+                  </td>
+
+                  <td className="py-3 pr-3">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={l?.creator?.photo || "https://i.ibb.co/ZxK3f6K/user.png"}
+                        alt="creator"
+                        className="h-9 w-9 rounded-2xl object-cover"
+                      />
+                      <div>
+                        <p className="text-sm font-extrabold text-slate-900">
+                          {l?.creator?.name || "Unknown"}
+                        </p>
+                        <p className="text-xs font-semibold text-slate-500">
+                          {l?.creator?.email || ""}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="py-3 pr-3">
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-700">
+                      {l.visibility || "public"}
+                    </span>
+                  </td>
+
+                  <td className="py-3 pr-3">
+                    <span
+                      className={[
+                        "rounded-full px-3 py-1 text-xs font-extrabold",
+                        l.accessLevel === "premium"
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-indigo-100 text-indigo-700",
+                      ].join(" ")}
+                    >
+                      {l.accessLevel || "free"}
+                    </span>
+                  </td>
+
+                  <td className="py-3 pr-3">
+                    <button
+                      onClick={() => toggleFeatured(id, !!l.isFeatured)}
+                      className={[
+                        "rounded-xl px-3 py-2 text-xs font-extrabold",
+                        l.isFeatured
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-slate-100 text-slate-700",
+                      ].join(" ")}
+                    >
+                      {l.isFeatured ? "Featured ✅" : "Make Featured"}
+                    </button>
+                  </td>
+
+                  <td className="py-3 pr-3">
+                    <button
+                      onClick={() => toggleReviewed(id, !!l.isReviewed)}
+                      className={[
+                        "rounded-xl px-3 py-2 text-xs font-extrabold",
+                        l.isReviewed
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-100 text-slate-700",
+                      ].join(" ")}
+                    >
+                      {l.isReviewed ? "Reviewed ✅" : "Mark Reviewed"}
+                    </button>
+                  </td>
+
+                  <td className="py-3 pr-3">
+                    <button
+                      onClick={() => removeLesson(id)}
+                      className="rounded-xl bg-rose-100 px-3 py-2 text-xs font-extrabold text-rose-700"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {lessons.length === 0 && (
+              <tr>
+                <td colSpan="7" className="py-10 text-center font-semibold text-slate-500">
+                  No lessons found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+import { useEffect, useMemo, useState } from "react";
+import Swal from "sweetalert2";
+import { toast } from "react-toastify";
+import LottieLoader from "../../components/LottieLoader";
+import { adminDeleteUser, adminGetUsers, adminSetUserRole } from "../../api/admin";
+
+export default function ManageUsers() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data = await adminGetUsers();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => {
+      const name = (u.name || "").toLowerCase();
+      const email = (u.email || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || (u.uid || "").includes(q);
+    });
+  }, [users, search]);
+
+  const changeRole = async (uid, nextRole) => {
+    const ok = await Swal.fire({
+      icon: "question",
+      title: "Change role?",
+      text: `Set role to "${nextRole}"?`,
+      showCancelButton: true,
+      confirmButtonText: "Yes, update",
+    });
+
+    if (!ok.isConfirmed) return;
+
+    try {
+      await adminSetUserRole(uid, nextRole);
+      toast.success("Role updated ✅");
+      await load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  const removeUser = async (uid) => {
+    const ok = await Swal.fire({
+      icon: "warning",
+      title: "Delete user?",
+      text: "This will delete user from MongoDB users collection.",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+    });
+
+    if (!ok.isConfirmed) return;
+
+    try {
+      await adminDeleteUser(uid);
+      toast.success("User deleted ✅");
+      await load();
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
+
+  if (loading) return <LottieLoader />;
+
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-extrabold text-slate-900">Manage Users</h2>
+          <p className="mt-1 text-sm font-semibold text-slate-600">
+            View all users, promote to admin, and delete (optional).
+          </p>
+        </div>
+
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search name/email/uid..."
+          className="w-full max-w-sm rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+      </div>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-[900px] w-full text-left text-sm">
+          <thead>
+            <tr className="border-b text-xs font-extrabold uppercase text-slate-600">
+              <th className="py-3 pr-3">User</th>
+              <th className="py-3 pr-3">Email</th>
+              <th className="py-3 pr-3">Role</th>
+              <th className="py-3 pr-3">Premium</th>
+              <th className="py-3 pr-3">Lessons</th>
+              <th className="py-3 pr-3">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filtered.map((u) => (
+              <tr key={u.uid} className="border-b last:border-0">
+                <td className="py-3 pr-3">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={u.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
+                      alt="user"
+                      className="h-10 w-10 rounded-2xl object-cover"
+                    />
+                    <div>
+                      <p className="font-extrabold text-slate-900">{u.name || "Unnamed"}</p>
+                      <p className="text-xs font-semibold text-slate-500">
+                        {u.uid}
+                      </p>
+                    </div>
+                  </div>
+                </td>
+
+                <td className="py-3 pr-3 font-semibold text-slate-700">{u.email}</td>
+
+                <td className="py-3 pr-3">
+                  <span
+                    className={[
+                      "rounded-full px-3 py-1 text-xs font-extrabold",
+                      u.role === "admin"
+                        ? "bg-slate-900 text-white"
+                        : "bg-indigo-100 text-indigo-700",
+                    ].join(" ")}
+                  >
+                    {u.role || "user"}
+                  </span>
+                </td>
+
+                <td className="py-3 pr-3">
+                  <span
+                    className={[
+                      "rounded-full px-3 py-1 text-xs font-extrabold",
+                      u.isPremium ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700",
+                    ].join(" ")}
+                  >
+                    {u.isPremium ? "Premium" : "Free"}
+                  </span>
+                </td>
+
+                <td className="py-3 pr-3 font-extrabold text-slate-900">
+                  {u.lessonsCreated ?? 0}
+                </td>
+
+                <td className="py-3 pr-3">
+                  <div className="flex flex-wrap gap-2">
+                    {u.role !== "admin" ? (
+                      <button
+                        onClick={() => changeRole(u.uid, "admin")}
+                        className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-extrabold text-white"
+                      >
+                        Make Admin
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => changeRole(u.uid, "user")}
+                        className="rounded-xl bg-indigo-100 px-3 py-2 text-xs font-extrabold text-indigo-700"
+                      >
+                        Make User
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => removeUser(u.uid)}
+                      className="rounded-xl bg-rose-100 px-3 py-2 text-xs font-extrabold text-rose-700"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan="6" className="py-10 text-center font-semibold text-slate-500">
+                  No users found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <button
+        onClick={load}
+        className="mt-6 rounded-xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white"
+      >
+        Refresh
+      </button>
+    </div>
+  );
+}
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { toast } from "react-toastify";
+import useAuth from "../../hooks/useAuth";
+import LottieLoader from "../../components/LottieLoader";
+import { getFavoriteLessons, toggleFavorite } from "../../api/favorites";
+
+export default function MyFavorites() {
+  const { user } = useAuth();
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data = await getFavoriteLessons(user?.uid);
+      setRows(Array.isArray(data) ? data : []);
+    } catch (e) {
+      toast.error(e.message || "Failed to load favorites");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
+
+  const onRemove = async (lessonId) => {
+    try {
+      await toggleFavorite(user.uid, lessonId);
+      toast.success("Removed from favorites");
+      setRows((prev) => prev.filter((x) => x._id !== lessonId));
+    } catch (e) {
+      toast.error(e.message || "Failed to remove");
+    }
+  };
+
+  if (loading) return <LottieLoader />;
+
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm">
+      <h1 className="text-xl font-extrabold text-slate-900">My Favorites</h1>
+      <p className="mt-1 text-sm font-semibold text-slate-600">
+        Saved lessons list (table view).
+      </p>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="text-left text-slate-600">
+            <tr className="border-b">
+              <th className="py-3 pr-3 font-extrabold">Title</th>
+              <th className="py-3 pr-3 font-extrabold">Category</th>
+              <th className="py-3 pr-3 font-extrabold">Tone</th>
+              <th className="py-3 pr-3 font-extrabold">Access</th>
+              <th className="py-3 pr-3 font-extrabold">Created</th>
+              <th className="py-3 pr-3 font-extrabold">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {rows.map((l) => (
+              <tr key={l._id} className="border-b last:border-b-0">
+                <td className="py-3 pr-3 font-bold text-slate-900">{l.title}</td>
+                <td className="py-3 pr-3">{l.category}</td>
+                <td className="py-3 pr-3">{l.tone}</td>
+                <td className="py-3 pr-3">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-700">
+                    {(l.accessLevel || "free").toUpperCase()}
+                  </span>
+                </td>
+                <td className="py-3 pr-3">
+                  {l.createdAt ? new Date(l.createdAt).toLocaleDateString() : ""}
+                </td>
+                <td className="py-3 pr-3 flex flex-wrap gap-2">
+                  <Link
+                    to={`/lesson/${l._id}`}
+                    className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-extrabold text-white"
+                  >
+                    Details
+                  </Link>
+
+                  <button
+                    onClick={() => onRemove(l._id)}
+                    className="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-700"
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {!rows.length && (
+          <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-center">
+            <p className="font-extrabold text-slate-900">No favorites yet</p>
+            <p className="text-sm font-semibold text-slate-600 mt-1">
+              Save lessons from Public Lessons / Lesson Details.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+import { useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
+import useAuth from "../../hooks/useAuth";
+import { getMyLessons } from "../../api/lessons";
+
+const MyLessons = () => {
+  const { user } = useAuth();
+  const [lessons, setLessons] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const reqIdRef = useRef(0);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setLessons([]);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const myReqId = ++reqIdRef.current;
+
+    const run = async () => {
+      try {
+        setLoading(true);
+
+        const data = await getMyLessons(user.uid);
+        if (cancelled || reqIdRef.current !== myReqId) return;
+
+        setLessons(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (cancelled || reqIdRef.current !== myReqId) return;
+        toast.error(e?.message || "Failed to load lessons");
+      } finally {
+        // ✅ no red underline now
+        if (!cancelled && reqIdRef.current === myReqId) {
+          setLoading(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid]);
+
+  if (loading) {
+    return <div className="rounded-2xl bg-white p-6 shadow-sm">Loading...</div>;
+  }
+
+  return (
+    <div className="rounded-2xl bg-white p-6 shadow-sm">
+      <h1 className="mb-4 text-xl font-extrabold text-slate-900">My Lessons</h1>
+
+      {lessons.length === 0 ? (
+        <p className="text-sm text-slate-500">You haven’t created any lessons yet.</p>
+      ) : (
+        <div className="space-y-3">
+          {lessons.map((lesson) => (
+            <div
+              key={lesson._id}
+              className="rounded-xl border p-4 transition hover:-translate-y-0.5 hover:shadow"
+            >
+              <h3 className="font-bold text-slate-900">{lesson.title}</h3>
+              <p className="mt-1 text-xs text-slate-500">
+                {lesson.category} • {lesson.accessLevel}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MyLessons;
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import useAuth from "../../hooks/useAuth";
+import useDashboardSummary from "../../hooks/useDashboardSummary";
+import GradientButton from "../../components/GradientButton";
+import LottieLoader from "../../components/LottieLoader";
+
+const API = import.meta.env.VITE_API_URL;
+
+const StatCard = ({ label, value, pill }) => (
+  <div className="rounded-2xl bg-white/70 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-lg">
+    <p className="text-xs font-bold tracking-widest text-slate-500">{label}</p>
+    <div className="mt-2 flex items-end justify-between gap-2">
+      <p className="text-3xl font-extrabold text-slate-900">{value}</p>
+      {pill}
+    </div>
+  </div>
+);
+
+const LessonCard = ({ lesson }) => {
+  const created = lesson?.createdAt ? new Date(lesson.createdAt).toLocaleDateString() : "";
+
+  return (
+    <div className="group relative overflow-hidden rounded-3xl bg-white/70 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:shadow-xl">
+      <div className="relative p-5">
+        <div className="flex items-center justify-between gap-2">
+          <span className="rounded-xl bg-slate-900 px-2.5 py-1 text-[10px] font-extrabold tracking-widest text-white">
+            {(lesson.accessLevel || "free").toUpperCase()}
+          </span>
+          <span className="text-xs font-semibold text-slate-500">{created}</span>
+        </div>
+
+        <h3 className="mt-3 line-clamp-2 text-lg font-extrabold text-slate-900">
+          {lesson.title}
+        </h3>
+
+        <p className="mt-2 line-clamp-3 text-sm text-slate-600">
+          {lesson.description}
+        </p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">
+            {lesson.category || "General"}
+          </span>
+          <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
+            {lesson.tone || lesson.emotionalTone || "Neutral"}
+          </span>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src={lesson?.creator?.photo || "https://i.ibb.co/ZxK3f6K/user.png"}
+              alt="creator"
+              className="h-9 w-9 rounded-2xl object-cover"
+            />
+            <div className="leading-tight">
+              <p className="text-sm font-bold text-slate-900">
+                {lesson?.creator?.name || "You"}
+              </p>
+              <p className="text-xs font-semibold text-slate-500">
+                ❤️ {lesson.likesCount || 0} • 🔖 {lesson.favoritesCount || 0}
+              </p>
+            </div>
+          </div>
+
+          <Link
+            to={`/lesson/${lesson._id}`}
+            className="text-sm font-extrabold text-primary hover:underline"
+          >
+            See details →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Profile = () => {
+  const navigate = useNavigate();
+  const { user, loading: authLoading, updateUserProfile } = useAuth();
+
+  const { data, loading, error } = useDashboardSummary(user?.uid);
+
+  const isPremium = !!data?.user?.isPremium;
+
+  const counts = useMemo(() => {
+    return {
+      lessonsCreated: data?.counts?.publicLessons ?? 0,
+      totalLikes: data?.counts?.likes ?? 0,
+      totalSaved: data?.counts?.favorites ?? 0,
+    };
+  }, [data]);
+
+  // Edit form
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(user?.displayName || "");
+  const [photo, setPhoto] = useState(user?.photoURL || "");
+  const [saving, setSaving] = useState(false);
+
+  //public lessons list 
+  const [myPublicLessons, setMyPublicLessons] = useState([]);
+  const [lessonsLoading, setLessonsLoading] = useState(true);
+
+  useEffect(() => {
+    setName(user?.displayName || "");
+    setPhoto(user?.photoURL || "");
+  }, [user?.displayName, user?.photoURL]);
+
+  useEffect(() => {
+    if (!user?.uid) {
+      setMyPublicLessons([]);
+      setLessonsLoading(false);
+      return;
+    }
+
+    let ignore = false;
+
+    (async () => {
+      try {
+        setLessonsLoading(true);
+        const res = await fetch(`${API}/lessons/my?uid=${user.uid}`);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.message || "Failed to load your lessons");
+
+        const onlyPublic = (Array.isArray(json) ? json : [])
+          .filter((l) => l.visibility === "public")
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        if (!ignore) setMyPublicLessons(onlyPublic);
+      } catch {
+        if (!ignore) setMyPublicLessons([]);
+      } finally {
+        if (!ignore) setLessonsLoading(false);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, [user?.uid]);
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await updateUserProfile(name, photo);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (authLoading || loading) return <LottieLoader />;
+
+  // If "User not found"
+  if (error) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] w-full px-4 py-6">
+        <div className="mx-auto max-w-4xl rounded-2xl bg-red-50 p-6 text-sm font-semibold text-red-700">
+          {error}
+          <p className="mt-2 text-xs font-bold text-red-800">
+            If it says “User not found”, logout → login again (upsert runs on login).
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-80px)] w-full px-4 py-6">
+      <div className="mx-auto max-w-6xl">
+        {/* HEADER CARD */}
+        <section className="relative overflow-hidden rounded-[32px] bg-white/70 shadow-sm backdrop-blur">
+          <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-r from-indigo-200/60 via-fuchsia-200/50 to-sky-200/60" />
+
+          <div className="relative grid gap-6 p-6 md:grid-cols-[220px_1fr] md:items-center">
+            <div className="flex justify-center md:justify-start">
+              <img
+                src={user?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
+                alt="Profile"
+                className="h-36 w-36 rounded-[28px] object-cover shadow-md md:h-44 md:w-44"
+              />
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-2xl font-extrabold text-slate-900 md:text-3xl">
+                    {data?.user?.name || user?.displayName || "Anonymous User"}
+                  </h1>
+
+                  {isPremium ? (
+                    <span className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-extrabold text-amber-800">
+                      Premium ⭐
+                    </span>
+                  ) : (
+                    <span className="rounded-lg bg-slate-900 px-2 py-1 text-xs font-extrabold text-white">
+                      Free
+                    </span>
+                  )}
+                </div>
+
+                <p className="mt-1 text-sm font-semibold text-slate-600">
+                  {data?.user?.email || user?.email}
+                </p>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  <Link to="/dashboard/add-lesson">
+                    <GradientButton variant="bluePink">+ Add Lesson</GradientButton>
+                  </Link>
+
+                  <button
+                    onClick={() => setEditing((v) => !v)}
+                    className="rounded-xl border border-white/50 bg-white/60 px-5 py-2.5 text-sm font-extrabold text-slate-800 shadow-sm transition hover:bg-white/80 hover:shadow-md"
+                    type="button"
+                  >
+                    {editing ? "Close Edit" : "Edit Profile"}
+                  </button>
+                </div>
+
+                {editing && (
+                  <form
+                    onSubmit={handleSave}
+                    className="mt-5 grid gap-3 rounded-2xl bg-white p-4 shadow-sm"
+                  >
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <label className="text-xs font-extrabold text-slate-600">
+                        Display name
+                        <input
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold outline-none focus:border-slate-400"
+                          placeholder="Your name"
+                        />
+                      </label>
+
+                      <label className="text-xs font-extrabold text-slate-600">
+                        Photo URL
+                        <input
+                          value={photo}
+                          onChange={(e) => setPhoto(e.target.value)}
+                          className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold outline-none focus:border-slate-400"
+                          placeholder="https://..."
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <GradientButton
+                        variant="greenBlue"
+                        disabled={saving}
+                        className="disabled:opacity-60"
+                      >
+                        {saving ? "Saving..." : "Save changes"}
+                      </GradientButton>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditing(false);
+                          setName(user?.displayName || "");
+                          setPhoto(user?.photoURL || "");
+                        }}
+                        className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-extrabold text-slate-800 shadow-sm transition hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+
+                    <p className="text-xs font-semibold text-slate-500">
+                      Email editing is disabled for Firebase security.
+                    </p>
+                  </form>
+                )}
+              </div>
+
+              {/* right stats mini */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
+                  <p className="text-xs font-extrabold text-slate-500">Lessons</p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                    {counts.lessonsCreated}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
+                  <p className="text-xs font-extrabold text-slate-500">Saved</p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                    {counts.totalSaved}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
+                  <p className="text-xs font-extrabold text-slate-500">Likes</p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                    {counts.totalLikes}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* STATS ROW */}
+        <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <StatCard
+            label="TOTAL PUBLIC LESSONS"
+            value={counts.lessonsCreated}
+            pill={
+              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-extrabold text-indigo-700">
+                Newest first
+              </span>
+            }
+          />
+          <StatCard
+            label="TOTAL SAVED (FAVORITES)"
+            value={counts.totalSaved}
+            pill={
+              <Link
+                to="/dashboard/my-favorites"
+                className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white"
+              >
+                View
+              </Link>
+            }
+          />
+          <StatCard
+            label="PREMIUM STATUS"
+            value={isPremium ? "YES" : "NO"}
+            pill={
+              isPremium ? (
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
+                  Premium ⭐
+                </span>
+              ) : (
+                <button
+                  onClick={() => navigate("/pricing")}
+                  className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white"
+                >
+                  Upgrade
+                </button>
+              )
+            }
+          />
+        </section>
+        
+        
+        
+//clentside-3
+        {/* USER PUBLIC LESSONS */}
+        <section className="mt-6">
+          <div className="rounded-[32px] bg-white/50 p-6 shadow-sm backdrop-blur">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-extrabold text-slate-900">
+                  Your public lessons
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-600">
+                  Loaded from MongoDB (newest first).
+                </p>
+              </div>
+
+              <Link to="/dashboard/add-lesson">
+                <GradientButton variant="greenBlue">Create another</GradientButton>
+              </Link>
+            </div>
+
+            {lessonsLoading ? (
+              <div className="mt-6">
+                <LottieLoader />
+              </div>
+            ) : myPublicLessons.length === 0 ? (
+              <div className="mt-6 rounded-3xl bg-white p-6 text-center shadow-sm">
+                <p className="text-lg font-extrabold text-slate-900">
+                  No public lessons yet
+                </p>
+                <p className="mt-1 text-sm font-semibold text-slate-600">
+                  Create your first public lesson and share your wisdom.
+                </p>
+                <div className="mt-5 flex justify-center">
+                  <Link to="/dashboard/add-lesson">
+                    <GradientButton variant="bluePink">Add Lesson</GradientButton>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {myPublicLessons.map((lesson) => (
+                  <LessonCard key={lesson._id} lesson={lesson} />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+};
+
+export default Profile;
+import { useState } from "react";
+import { toast } from "react-toastify";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import { createLesson } from "../../api/lessons";
+import { Link, useNavigate } from "react-router-dom";
+import LottieLoader from "../../components/LottieLoader";
+
+export default function AddLesson() {
+  const { user } = useAuth();
+  const { plan, loading } = useUserPlan(user?.uid);
+  const isPremium = !!plan?.isPremium;
+  const navigate = useNavigate();
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Personal Growth");
+  const [tone, setTone] = useState("Motivational");
+  const [visibility, setVisibility] = useState("public");
+  const [accessLevel, setAccessLevel] = useState("free");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  if (loading) return <LottieLoader />;
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!user?.uid) {
+      toast.error("Please login first");
+      return;
+    }
+
+    // Free user cannot post premium lessons, but can post FREE
+    if (accessLevel === "premium" && !isPremium) {
+      toast.error("Upgrade to Premium to create premium lessons");
+      return;
+    }
+
+    const lesson = {
+      title,
+      description,
+      category,
+      tone,
+      visibility,
+      accessLevel: isPremium ? accessLevel : "free", 
+      photoUrl: photoUrl || "",
+      creator: {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || "",
+        photoURL: user.photoURL || "",
+      },
+    };
+
+    try {
+      setSaving(true);
+      await createLesson(lesson);
+      toast.success("Lesson added successfully ✅");
+
+      setTitle("");
+      setDescription("");
+      setCategory("Personal Growth");
+      setTone("Motivational");
+      setVisibility("public");
+      setAccessLevel("free");
+      setPhotoUrl("");
+
+      navigate("/dashboard/my-lessons");
+    } catch (err) {
+      toast.error(err?.message || "Failed to create lesson");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-extrabold text-slate-900">Add New Lesson</h1>
+
+        {!isPremium && (
+          <Link
+            to="/pricing"
+            className="rounded-xl bg-amber-100 px-4 py-2 text-sm font-extrabold text-amber-800"
+            title="Upgrade to create premium lessons"
+          >
+            Upgrade to Premium ⭐
+          </Link>
+        )}
+      </div>
+
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <input
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Lesson Title"
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+
+        <textarea
+          required
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={6}
+          placeholder="Full Description / Story / Insight"
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+
+        <input
+          value={photoUrl}
+          onChange={(e) => setPhotoUrl(e.target.value)}
+          placeholder="Image URL (optional) e.g. https://..."
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+
+        {photoUrl && (
+          <div className="overflow-hidden rounded-2xl border bg-slate-50">
+            <img
+              src={photoUrl}
+              alt="Preview"
+              className="h-44 w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                toast.error("Invalid image URL");
+              }}
+            />
+          </div>
+        )}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option>Personal Growth</option>
+              <option>Career</option>
+              <option>Relationships</option>
+              <option>Mindset</option>
+              <option>Mistakes Learned</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Emotional Tone</label>
+            <select
+              value={tone}
+              onChange={(e) => setTone(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option>Motivational</option>
+              <option>Sad</option>
+              <option>Realization</option>
+              <option>Gratitude</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Privacy</label>
+            <select
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option value="public">Public</option>
+              <option value="private">Private</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Access Level</label>
+            <select
+              value={accessLevel}
+              onChange={(e) => setAccessLevel(e.target.value)}
+              disabled={!isPremium}
+              title={!isPremium ? "Upgrade to Premium to create paid lessons" : ""}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:bg-slate-100"
+            >
+              <option value="free">Free</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+        </div>
+
+        {!isPremium && (
+          <p className="text-xs font-semibold text-amber-700">
+            “Premium” is disabled for Free users. Upgrade to Premium to create paid lessons.
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-xl bg-slate-900 px-6 py-2 text-sm font-extrabold text-white disabled:opacity-60"
+        >
+          {saving ? "Saving..." : "Save Lesson"}
+        </button>
+      </form>
+    </div>
+  );
+}
+import { Link } from "react-router-dom";
+import Lottie from "lottie-react";
+import GradientButton from "../../components/GradientButton";
+import Pageerror from "../../assets/Page Not Found 404.json";
+
+const NotFound = () => {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
+      <div className="w-full max-w-md">
+        <Lottie animationData={Pageerror} loop={true} />
+      </div>
+
+      <h2 className="mt-2 text-2xl font-bold text-slate-900 md:text-3xl">
+        Page not found
+      </h2>
+
+      <p className="mt-2 text-sm text-slate-600 max-w-md">
+     
+        YOUR FIND PAGE ARE NOT AVAILABLE FOR NOW,YOU'LL TRY LATER..!!!
+      </p>
+
+      <div className="mt-6">
+        <Link to="/">
+          <GradientButton variant="bluePink">Back to Home</GradientButton>
+        </Link>
+      </div>
+    </div>
+  );
+};
+
+export default NotFound;
+
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getFeaturedLessons } from "../../../api/home";
+import LottieLoader from "../../../components/LottieLoader";
+
+export default function FeaturedLessons() {
+  const [lessons, setLessons] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getFeaturedLessons();
+        if (!ignore) setLessons(Array.isArray(data) ? data : []);
+      } catch {
+        if (!ignore) setLessons([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => (ignore = true);
+  }, []);
+
+  return (
+    <section className="bg-white/10">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-extrabold text-slate-900">
+              Featured Life Lessons
+            </h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Selected by admin (Manage Lessons → Featured).
+            </p>
+          </div>
+
+          <Link
+            to="/public-lessons"
+            className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white shadow-sm transition hover:-translate-y-[1px] hover:shadow-md"
+          >
+            View all →
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="mt-6"><LottieLoader /></div>
+        ) : (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {lessons.map((l) => (
+              <div
+                key={l._id}
+                className="group rounded-3xl border border-white/50 bg-white/70 p-6 shadow-sm backdrop-blur
+                           transition hover:-translate-y-1 hover:shadow-lg"
+              >
+                <p className="text-xs font-extrabold text-slate-600">
+                  {l.tone} • {l.category}
+                </p>
+
+                <h3 className="mt-2 text-lg font-extrabold text-slate-900 line-clamp-2">
+                  {l.title}
+                </h3>
+
+                <p className="mt-2 text-sm font-semibold text-slate-600 line-clamp-3">
+                  {l.description}
+                </p>
+
+                <div className="mt-5 flex items-center justify-between">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-700">
+                    {(l.accessLevel || "free").toUpperCase()}
+                  </span>
+
+                  <Link
+                    to="/public-lessons"
+                    className="text-sm font-extrabold text-indigo-700 transition group-hover:underline"
+                  >
+                    Explore →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && lessons.length === 0 && (
+          <div className="mt-6 rounded-3xl bg-white/70 p-6 text-center shadow-sm">
+            <p className="text-sm font-extrabold text-slate-900">No featured lessons yet.</p>
+            <p className="mt-1 text-sm font-semibold text-slate-600">
+              Admin can mark lessons as featured from Manage Lessons.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+import { useRef } from "react";
+import { Link } from "react-router-dom";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay } from "swiper/modules";
+import "swiper/css";
+
+const items = [
+  {
+    id: "1",
+    title: "A calm morning can reset your day",
+    desc: "Small rituals build focus and emotional balance over time.",
+    tag: "MINDFUL",
+    date: "Dec 20, 2025",
+    img: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    id: "2",
+    title: "Consistency beats motivation",
+    desc: "A tiny step daily builds momentum and self-trust.",
+    tag: "GROWTH",
+    date: "Dec 19, 2025",
+    img: "https://images.unsplash.com/photo-1516542076529-1ea3854896f2?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    id: "3",
+    title: "Boundaries protect your peace",
+    desc: "Saying no kindly is a powerful act of self-respect.",
+    tag: "RELATION",
+    date: "Dec 18, 2025",
+    img: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    id: "4",
+    title: "Mistakes are data, not identity",
+    desc: "Take the lesson, leave the shame, move forward stronger.",
+    tag: "MINDSET",
+    date: "Dec 17, 2025",
+    img: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    id: "5",
+    title: "Gratitude shifts your focus",
+    desc: "Track small wins to build confidence and clarity.",
+    tag: "GRATITUDE",
+    date: "Dec 16, 2025",
+    img: "https://images.unsplash.com/photo-1496307653780-42ee777d4833?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    id: "6",
+    title: "Learn to rest without guilt",
+    desc: "Rest is not lazy—it's recovery and renewal.",
+    tag: "SELFCARE",
+    date: "Dec 15, 2025",
+    img: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    id: "7",
+    title: "Your environment shapes habits",
+    desc: "Make good choices easier by designing your space.",
+    tag: "SYSTEMS",
+    date: "Dec 14, 2025",
+    img: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80",
+  },
+  {
+    id: "8",
+    title: "Reflection makes you wiser",
+    desc: "Write lessons to remember what truly matters.",
+    tag: "REFLECT",
+    date: "Dec 13, 2025",
+    img: "https://images.unsplash.com/photo-1511988617509-a57c8a288659?auto=format&fit=crop&w=1200&q=80",
+  },
+];
+
+const FeaturedLessonsCarousel = () => {
+  const swiperRef = useRef(null);
+
+  return (
+    <section className="bg-gradient-to-b from-slate-50 via-white to-slate-100">
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
+            <span className="text-xs font-extrabold tracking-widest text-slate-700">
+              FEATURED LESSONS
+            </span>
+            <span className="text-slate-400">›</span>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => swiperRef.current?.slidePrev()}
+              className="h-10 w-10 rounded-lg border border-slate-200 bg-white text-lg font-bold hover:bg-slate-100 active:scale-95 transition"
+              aria-label="Prev"
+            >
+              ‹
+            </button>
+            <button
+              onClick={() => swiperRef.current?.slideNext()}
+              className="h-10 w-10 rounded-lg border border-slate-200 bg-white text-lg font-bold hover:bg-slate-100 active:scale-95 transition"
+              aria-label="Next"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+
+        {/* Slider */}
+        <Swiper
+          modules={[Autoplay]}
+          onSwiper={(s) => (swiperRef.current = s)}
+          loop={true}
+          speed={300} 
+          autoplay={{
+            delay: 2, 
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+          }}
+          freeMode={true}
+          allowTouchMove={true}
+          spaceBetween={24}
+          slidesPerView={1.2}
+          breakpoints={{
+            640: { slidesPerView: 2.1 },
+            1024: { slidesPerView: 4.1 },
+          }}
+        >
+          {items.map((item) => (
+            <SwiperSlide key={item.id} className="h-auto">
+              <article className="group flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:ring-slate-200">
+                {/* Image */}
+                <div className="relative h-52 overflow-hidden">
+                  <img
+                    src={item.img}
+                    alt={item.title}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                </div>
+
+                {/* Content */}
+                <div className="flex flex-1 flex-col p-5">
+                  <h3 className="text-lg font-extrabold leading-snug text-slate-900 line-clamp-2">
+                    {item.title}
+                  </h3>
+
+                  <p className="mt-2 text-sm text-slate-600 line-clamp-3">
+                    {item.desc}
+                  </p>
+
+                  <div className="mt-auto pt-4">
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-extrabold tracking-widest text-white">
+                        {item.tag}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-500">
+                        {item.date}
+                      </span>
+                    </div>
+
+                    <Link
+                      to="/public-lessons"
+                      className="mt-3 inline-flex items-center gap-2 text-sm font-extrabold text-indigo-600 hover:underline"
+                    >
+                      Read more <span className="text-base">→</span>
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </div>
+    </section>
+  );
+};
+
+export default FeaturedLessonsCarousel;
+import { Link } from "react-router-dom";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Autoplay, Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
+import GradientButton from "../../../components/GradientButton";
+
+const slides = [
+  {
+    badge: "Digital Life Lessons",
+    title: "Capture your wisdom before it fades.",
+    desc: "Write meaningful lessons, organize them by category and emotional tone, and revisit them anytime.",
+    image:
+      "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+    cta1: { text: "Explore Public Lessons", to: "/public-lessons", variant: "bluePink" },
+    cta2: { text: "Go to Dashboard", to: "/dashboard", variant: "greenBlue" },
+  },
+  {
+    badge: "Mindful Reflection",
+    title: "Turn experiences into personal growth.",
+    desc: "Save private reflections or share public wisdom to inspire others in the community.",
+    image:
+      "https://images.unsplash.com/photo-1516534775068-ba3e7458af70?auto=format&fit=crop&w=1600&q=80",
+    cta1: { text: "Add a Lesson", to: "/dashboard/add-lesson", variant: "greenBlue" },
+    cta2: { text: "See Public Lessons", to: "/public-lessons", variant: "bluePink" },
+  },
+  {
+    badge: "Community Wisdom",
+    title: "Learn from stories, not just quotes.",
+    desc: "Browse lessons by category, emotional tone, and keywords—discover insights that match your journey.",
+    //  video background 
+    video:
+      "https://www.w3schools.com/html/mov_bbb.mp4",
+    image:
+      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1600&q=80",
+    cta1: { text: "UpgradePricing", to: "/pricing", variant: "pinkRed" },
+    cta2: { text: "My Lessons", to: "/dashboard/my-lessons", variant: "bluePink" },
+  },
+];
+
+const HeroSlider = () => {
+  return (
+    <section className="bg-white/20">
+      <div className="mx-auto max-w-6xl px-4 py-8 md:py-12">
+        <div className="overflow-hidden rounded-3xl border border-white/40 bg-white/40 shadow-sm backdrop-blur">
+          <Swiper
+            modules={[Autoplay, Pagination]}
+            autoplay={{ delay: 3500, disableOnInteraction: false }}
+            pagination={{ clickable: true }}
+            loop
+          >
+            {slides.map((s, idx) => (
+              <SwiperSlide key={idx}>
+                <div className="grid gap-8 p-5 md:grid-cols-2 md:items-center md:p-10">
+                  {/* LEFT */}
+                  <div>
+
+                    <span className="inline-flex rounded-full bg-white/70 px-3 py-1 text-xs font-bold text-indigo-700">
+                      {s.badge}
+                    </span>
+
+                    <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 md:text-5xl">
+                      {s.title}
+                    </h1>
+
+                    <p className="mt-3 text-sm leading-relaxed text-slate-600 md:text-base">
+                      {s.desc}
+                    </p>
+
+                    <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                      <Link to={s.cta1.to}>
+                        <GradientButton variant={s.cta1.variant}>
+                          {s.cta1.text}
+                        </GradientButton>
+                      </Link>
+
+                      <Link to={s.cta2.to}>
+                        <GradientButton variant={s.cta2.variant}>
+                          {s.cta2.text}
+                        </GradientButton>
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* RIGHT */}
+                  <div className="relative overflow-hidden rounded-3xl bg-white shadow-sm">
+                    {/* gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/40 via-transparent to-white/10" />
+
+                    {s.video ? (
+                      <video
+                        className="h-72 w-full object-cover sm:h-80 md:h-[380px]"
+                        src={s.video}
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                      />
+                    ) : (
+                      <img
+                        className="h-72 w-full object-cover sm:h-80 md:h-[380px]"
+                        src={s.image}
+                        alt={s.title}
+                        loading="lazy"
+                      />
+                    )}
+
+                    <div className="relative p-4">
+                      <p className="text-sm font-bold text-slate-900">
+                        Save lessons with meaning
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Public or Private — Free or Premium access level.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default HeroSlider;
+import { Link } from "react-router-dom";
+
+const big = {
+  category: "DAILY MEMORY",
+  date: "Today",
+  title: "A quiet morning can transform your mood",
+  desc: "A cup of tea, fresh air, and one intention—small things that reset the mind.",
+  img: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=1600&q=80",
+};
+
+const small = [
+  {
+    id: "1",
+    category: "TRANSFORMATION",
+    date: "This Week",
+    title: "7-day reflection habit that changes decisions",
+    img: "https://images.unsplash.com/photo-1516542076529-1ea3854896f2?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    id: "2",
+    category: "SELF CARE",
+    date: "Today",
+    title: "Rest without guilt: protect your energy",
+    img: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    id: "3",
+    category: "MINDFUL",
+    date: "Weekend",
+    title: "3-line gratitude journaling that works",
+    img: "https://images.unsplash.com/photo-1496307653780-42ee777d4833?auto=format&fit=crop&w=1400&q=80",
+  },
+  {
+    id: "4",
+    category: "RELATIONSHIPS",
+    date: "This Month",
+    title: "Kind boundaries: protect peace & love",
+    img: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=1400&q=80",
+  },
+];
+
+const HotTopicsGrid = () => {
+  return (
+    <section className="bg-gradient-to-b from-white via-slate-50 to-white">
+      <div className="mx-auto max-w-7xl px-4 py-12">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          <div className="inline-flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-sm">
+            <span className="text-xs font-extrabold tracking-widest text-slate-700">
+              HOT TOPICS
+            </span>
+            <span className="text-slate-400">›</span>
+          </div>
+
+          <Link
+            to="/public-lessons"
+            className="text-sm font-extrabold text-primary hover:underline"
+          >
+            Explore all →
+          </Link>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-3">
+          {/* BIG LEFT */}
+          <Link
+            to="/public-lessons"
+            className="group relative overflow-hidden rounded-2xl lg:col-span-2"
+          >
+            <div className="relative h-[300px] sm:h-[420px] lg:h-[520px]">
+              <img
+                src={big.img}
+                alt={big.title}
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
+            </div>
+
+            {/* hover */}
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-white/30 transition group-hover:ring-white/60" />
+            <div className="absolute inset-0 rounded-2xl shadow-lg transition group-hover:shadow-2xl" />
+
+            <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+              <div className="mb-3 flex items-center gap-3">
+                <span className="rounded-md bg-white px-2 py-1 text-[10px] font-extrabold tracking-widest text-slate-900">
+                  {big.category}
+                </span>
+                <span className="text-xs font-semibold text-white/80">
+                  {big.date}
+                </span>
+              </div>
+
+              <h3 className="text-2xl font-extrabold text-white sm:text-3xl">
+                {big.title}
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm text-white/80 sm:text-base">
+                {big.desc}
+              </p>
+
+              <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm font-extrabold text-white backdrop-blur transition group-hover:bg-white/20">
+                Read lesson <span className="text-base">→</span>
+              </div>
+            </div>
+          </Link>
+
+          {/* RIGHT GRID */}
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+            {small.map((it, idx) => (
+              <Link
+                key={it.id}
+                to="/public-lessons"
+                className="group overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-100 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                style={{
+                  animation: `fadeUp .6s ease both`,
+                  animationDelay: `${idx * 120}ms`,
+                }}
+              >
+                <div className="relative h-44 overflow-hidden">
+                  <img
+                    src={it.img}
+                    alt={it.title}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                </div>
+
+                <div className="p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="rounded-md bg-slate-900 px-2 py-1 text-[10px] font-extrabold tracking-widest text-white">
+                      {it.category}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500">
+                      {it.date}
+                    </span>
+                  </div>
+
+                  <h4 className="mt-3 text-base font-extrabold text-slate-900 line-clamp-2">
+                    {it.title}
+                  </h4>
+
+                  <div className="mt-3 text-sm font-extrabold text-indigo-600">
+                    Read →
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* tiny keyframes */}
+        <style>
+          {`
+            @keyframes fadeUp {
+              from { opacity: 0; transform: translateY(10px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}
+        </style>
+      </div>
+    </section>
+  );
+};
+
+export default HotTopicsGrid;
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getMostSavedLessons } from "../../../api/home";
+import LottieLoader from "../../../components/LottieLoader";
+
+export default function MostSavedLessons() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getMostSavedLessons();
+
+        // ✅ rows must be array
+        const safe = Array.isArray(data) ? data.filter(Boolean) : [];
+        if (!ignore) setRows(safe);
+      } catch {
+        if (!ignore) setRows([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  return (
+    <section className="bg-gradient-to-b from-indigo-50 via-white to-white/10">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="rounded-3xl bg-white/70 p-6 shadow-sm backdrop-blur">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-extrabold text-slate-900">Most Saved Lessons</h3>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                Ranked by favorites count.
+              </p>
+            </div>
+
+            <Link
+              to="/public-lessons"
+              className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white shadow-sm transition hover:-translate-y-[1px] hover:shadow-md"
+            >
+              Explore more →
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="mt-6">
+              <LottieLoader />
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(rows || [])
+                .filter(Boolean)
+                .filter((r) => r?.lesson) // ✅ IMPORTANT FIX
+                .map((r) => {
+                  const l = r.lesson;
+
+                  return (
+                    <div
+                      key={r.lessonId || l._id} // ✅ stable key
+                      className="group overflow-hidden rounded-3xl border border-white/60 bg-white shadow-sm
+                                 transition hover:-translate-y-1 hover:shadow-lg"
+                    >
+                      <div className="relative">
+                        <img
+                          src={
+                            l?.photoUrl ||
+                            "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=1400&q=80"
+                          }
+                          alt={l?.title || "Lesson"}
+                          className="h-44 w-full object-cover"
+                          loading="lazy"
+                        />
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                        <div className="absolute bottom-3 left-3">
+                          <p className="text-xs font-extrabold text-white/95">
+                            🔖 {r?.saves || 0} saves
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-5">
+                        <h4 className="text-lg font-extrabold text-slate-900 line-clamp-2">
+                          {l?.title || "Untitled lesson"}
+                        </h4>
+
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                          <span className="rounded-full bg-indigo-100 px-3 py-1 font-extrabold text-indigo-700">
+                            {l?.category || "General"}
+                          </span>
+                          <span className="rounded-full bg-amber-100 px-3 py-1 font-extrabold text-amber-700">
+                            {l?.tone || "Neutral"}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 font-extrabold text-slate-700">
+                            {(l?.accessLevel || "free").toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div className="mt-4">
+                          <Link
+                            to={`/lesson/${l._id}`}
+                            className="text-sm font-extrabold text-indigo-700 transition group-hover:underline"
+                          >
+                            See details →
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+
+          {!loading && (!rows || rows.length === 0) && (
+            <div className="mt-6 rounded-3xl bg-slate-50 p-6 text-center">
+              <p className="text-sm font-extrabold text-slate-900">No saves yet</p>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                People will save lessons and they’ll appear here.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+import { Link } from "react-router-dom";
+import GradientButton from "../../../components/GradientButton";
+
+const plans = [
+  {
+    name: "FREE",
+    price: "৳0",
+    subtitle: "Start reflecting today",
+    accent: "from-sky-400 to-indigo-500",
+    features: [
+      "Create unlimited Free lessons",
+      "View public Free lessons",
+      "Save favorites",
+      "Basic profile",
+    ],
+    btn: {
+      text: "Explore Public Lessons",
+      to: "/public-lessons",
+      variant: "greenBlue",
+    },
+  },
+  {
+    name: "LIFETIME",
+    price: "৳1500",
+    subtitle: "One-time Premium access",
+    accent: "from-amber-400 to-orange-500",
+    features: [
+      "View Premium public lessons",
+      "Create Premium lessons",
+      "Premium lock/blur support",
+      "Priority visibility (later)",
+    ],
+    btn: { text: "Go to Pricing", to: "/pricing", variant: "pinkRed" },
+    highlight: true,
+  },
+  {
+    name: "PREMIUM",
+    price: "⭐",
+    subtitle: "Premium badge & benefits",
+    accent: "from-fuchsia-500 to-pink-500",
+    features: [
+      "Ad-free experience (later)",
+      "Advanced filters (later)",
+      "Featured requests (later)",
+      "Faster support (later)",
+    ],
+    btn: { text: "Upgrade", to: "/pricing", variant: "bluePink" },
+  },
+];
+
+const PricingTeaser = () => {
+  return (
+    <section className="relative overflow-hidden py-12 sm:py-14">
+      {/* ✅ Background gradient + soft blobs */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50 to-slate-100" />
+      <div className="pointer-events-none absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-indigo-200/40 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-amber-200/40 blur-3xl" />
+
+      <div className="relative mx-auto max-w-6xl px-4">
+        {/* Title */}
+        <div className="text-center">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 py-1 text-xs font-extrabold tracking-widest text-slate-700 shadow-sm backdrop-blur">
+            PRICING
+            <span className="text-slate-400">›</span>
+            UPGRADE
+          </p>
+
+          <h2 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+            Choose your plan
+          </h2>
+          <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
+            Start free anytime. Upgrade once for lifetime Premium access—unlock premium
+            lessons and premium creation.
+          </p>
+        </div>
+
+        {/* Cards */}
+        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+          {plans.map((p, idx) => (
+            <div
+              key={p.name}
+              className={[
+                "group relative overflow-hidden rounded-3xl bg-white/70 p-6 shadow-sm ring-1 ring-white/50 backdrop-blur",
+                "transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:ring-white/70",
+                p.highlight ? "lg:-translate-y-2 lg:shadow-xl" : "",
+              ].join(" ")}
+              style={{
+                animation: "fadeUp .55s ease both",
+                animationDelay: `${idx * 120}ms`,
+              }}
+            >
+              {/* Accent header */}
+              <div className={`absolute left-0 top-0 h-32 w-full bg-gradient-to-r ${p.accent}`} />
+              <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                <div className="absolute -left-20 top-10 h-40 w-40 rounded-full bg-white/25 blur-2xl" />
+                <div className="absolute -right-24 top-2 h-44 w-44 rounded-full bg-white/15 blur-2xl" />
+              </div>
+
+              {/* Best value badge */}
+              {p.highlight && (
+                <div className="absolute right-4 top-4 z-10 rounded-full bg-white/85 px-3 py-1 text-xs font-extrabold text-amber-700 shadow-sm">
+                  Best value ✨
+                </div>
+              )}
+
+              {/* Top content */}
+              <div className="relative z-10">
+                <p className="text-center text-xs font-extrabold tracking-[0.22em] text-white/95">
+                  {p.name}
+                </p>
+
+                <p className="mt-2 text-center text-4xl font-extrabold text-white sm:text-5xl">
+                  {p.price}
+                </p>
+
+                <p className="mt-2 text-center text-xs font-semibold text-white/90">
+                  {p.subtitle}
+                </p>
+
+                {/* Highlight pulse line */}
+                {p.highlight && (
+                  <div className="mx-auto mt-4 h-[3px] w-24 rounded-full bg-white/80 animate-pulse" />
+                )}
+              </div>
+
+              {/* Body */}
+              <div className="relative z-10 mt-6 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-100 transition group-hover:shadow-md">
+                <ul className="space-y-3 text-sm text-slate-700">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-3">
+                      <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[11px] font-extrabold text-white">
+                        ✓
+                      </span>
+                      <span className="font-semibold leading-relaxed">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-6 flex justify-center">
+                  <Link to={p.btn.to} className="w-full sm:w-auto">
+                    <GradientButton
+                      variant={p.btn.variant}
+                      className="w-full sm:w-auto"
+                    >
+                      {p.btn.text}
+                    </GradientButton>
+                  </Link>
+                </div>
+
+                {/* small hint */}
+                <p className="mt-4 text-center text-xs text-slate-500">
+                  No hidden fees • Cancel anytime (if monthly later)
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer link */}
+        <div className="mt-8 text-center">
+          <Link
+            to="/pricing"
+            className="inline-flex items-center gap-2 text-sm font-extrabold text-primary hover:underline"
+          >
+            See full comparison table <span className="text-base">→</span>
+          </Link>
+        </div>
+
+        {/* tiny keyframes */}
+        <style>
+          {`
+            @keyframes fadeUp {
+              from { opacity: 0; transform: translateY(12px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+          `}
+        </style>
+      </div>
+    </section>
+  );
+};
+
+export default PricingTeaser;
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { getMostSavedLessons } from "../../../api/home";
+import LottieLoader from "../../../components/LottieLoader";
+
+export default function MostSavedLessons() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getMostSavedLessons();
+
+        // ✅ rows must be array
+        const safe = Array.isArray(data) ? data.filter(Boolean) : [];
+        if (!ignore) setRows(safe);
+      } catch {
+        if (!ignore) setRows([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  return (
+    <section className="bg-gradient-to-b from-indigo-50 via-white to-white/10">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="rounded-3xl bg-white/70 p-6 shadow-sm backdrop-blur">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-extrabold text-slate-900">Most Saved Lessons</h3>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                Ranked by favorites count.
+              </p>
+            </div>
+
+            <Link
+              to="/public-lessons"
+              className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white shadow-sm transition hover:-translate-y-[1px] hover:shadow-md"
+            >
+              Explore more →
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="mt-6">
+              <LottieLoader />
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(rows || [])
+                .filter(Boolean)
+                .filter((r) => r?.lesson) // ✅ IMPORTANT FIX
+                .map((r) => {
+                  const l = r.lesson;
+
+                  return (
+                    <div
+                      key={r.lessonId || l._id} // ✅ stable key
+                      className="group overflow-hidden rounded-3xl border border-white/60 bg-white shadow-sm
+                                 transition hover:-translate-y-1 hover:shadow-lg"
+                    >
+                      <div className="relative">
+                        <img
+                          src={
+                            l?.photoUrl ||
+                            "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=1400&q=80"
+                          }
+                          alt={l?.title || "Lesson"}
+                          className="h-44 w-full object-cover"
+                          loading="lazy"
+                        />
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                        <div className="absolute bottom-3 left-3">
+                          <p className="text-xs font-extrabold text-white/95">
+                            🔖 {r?.saves || 0} saves
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="p-5">
+                        <h4 className="text-lg font-extrabold text-slate-900 line-clamp-2">
+                          {l?.title || "Untitled lesson"}
+                        </h4>
+
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                          <span className="rounded-full bg-indigo-100 px-3 py-1 font-extrabold text-indigo-700">
+                            {l?.category || "General"}
+                          </span>
+                          <span className="rounded-full bg-amber-100 px-3 py-1 font-extrabold text-amber-700">
+                            {l?.tone || "Neutral"}
+                          </span>
+                          <span className="rounded-full bg-slate-100 px-3 py-1 font-extrabold text-slate-700">
+                            {(l?.accessLevel || "free").toUpperCase()}
+                          </span>
+                        </div>
+
+                        <div className="mt-4">
+                          <Link
+                            to={`/lesson/${l._id}`}
+                            className="text-sm font-extrabold text-indigo-700 transition group-hover:underline"
+                          >
+                            See details →
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+
+          {!loading && (!rows || rows.length === 0) && (
+            <div className="mt-6 rounded-3xl bg-slate-50 p-6 text-center">
+              <p className="text-sm font-extrabold text-slate-900">No saves yet</p>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                People will save lessons and they’ll appear here.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+// src/pages/Home/WhyLifeMatters.jsx
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import LottieLoader from "../../../components/LottieLoader";
+import { getFeaturedLessons, getMostSavedLessons, getTopContributors } from "../../../api/home";
+
+const FALLBACK_IMG =
+  "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=1400&q=80";
+const FALLBACK_AVATAR = "https://i.ibb.co/ZxK3f6K/user.png";
+
+/* ---------------- Featured Lessons ---------------- */
+function FeaturedLessonsSection() {
+  const [lessons, setLessons] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getFeaturedLessons();
+        if (!ignore) setLessons(Array.isArray(data) ? data : []);
+      } catch {
+        if (!ignore) setLessons([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => (ignore = true);
+  }, []);
+
+  return (
+    <section className="bg-white/10">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-extrabold text-slate-900">Featured Life Lessons</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Selected by admin (Manage Lessons → Featured).
+            </p>
+          </div>
+
+          <Link
+            to="/public-lessons"
+            className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white shadow-sm transition hover:-translate-y-[1px] hover:shadow-md"
+          >
+            View all →
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="mt-6">
+            <LottieLoader />
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {(lessons || []).filter(Boolean).map((l) => (
+              <div
+                key={l?._id}
+                className="group rounded-3xl border border-white/50 bg-white/70 p-6 shadow-sm backdrop-blur
+                           transition hover:-translate-y-1 hover:shadow-lg"
+              >
+                <p className="text-xs font-extrabold text-slate-600">
+                  {l?.tone || l?.emotionalTone || "Tone"} • {l?.category || "Category"}
+                </p>
+
+                <h3 className="mt-2 text-lg font-extrabold text-slate-900 line-clamp-2">
+                  {l?.title || "Untitled"}
+                </h3>
+
+                <p className="mt-2 text-sm font-semibold text-slate-600 line-clamp-3">
+                  {l?.description || "No description"}
+                </p>
+
+                <div className="mt-5 flex items-center justify-between">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-700">
+                    {(l?.accessLevel || "free").toUpperCase()}
+                  </span>
+
+                  <Link
+                    to={`/lesson/${l?._id}`}
+                    className="text-sm font-extrabold text-indigo-700 transition group-hover:underline"
+                  >
+                    Details →
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && (!lessons || lessons.length === 0) && (
+          <div className="mt-6 rounded-3xl bg-white/70 p-6 text-center shadow-sm">
+            <p className="text-sm font-extrabold text-slate-900">No featured lessons yet.</p>
+            <p className="mt-1 text-sm font-semibold text-slate-600">
+              Admin can mark lessons as featured from Manage Lessons.
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Why Learning Matters (static) ---------------- */
+function WhyLearningMattersSection() {
+  const cards = [
+    {
+      title: "Turn experience into clarity",
+      desc: "Convert real life moments into lessons you can apply again and again.",
+      icon: "🧠",
+    },
+    {
+      title: "Grow with reflection",
+      desc: "Writing helps you notice patterns and make smarter decisions next time.",
+      icon: "✍️",
+    },
+    {
+      title: "Learn from others",
+      desc: "Explore community wisdom and discover new perspectives quickly.",
+      icon: "🤝",
+    },
+    {
+      title: "Track your progress",
+      desc: "Build a personal archive of growth across career, mindset and relationships.",
+      icon: "📈",
+    },
+  ];
+
+  return (
+    <section className="bg-gradient-to-b from-slate-50 via-white to-white">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <h2 className="text-2xl font-extrabold text-slate-900">Why Learning From Life Matters</h2>
+        <p className="mt-2 text-sm font-semibold text-slate-600">
+          Small reflections can create big change.
+        </p>
+
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {cards.map((c) => (
+            <div
+              key={c.title}
+              className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-1 hover:shadow-lg"
+            >
+              <div className="text-2xl">{c.icon}</div>
+              <h3 className="mt-3 text-lg font-extrabold text-slate-900">{c.title}</h3>
+              <p className="mt-2 text-sm font-semibold text-slate-600">{c.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Top Contributors ---------------- */
+function TopContributorsSection() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getTopContributors();
+        if (!ignore) setUsers(Array.isArray(data) ? data : []);
+      } catch {
+        if (!ignore) setUsers([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => (ignore = true);
+  }, []);
+
+  return (
+    <section className="bg-gradient-to-b from-amber-50 via-white to-white/10">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="rounded-3xl bg-white/70 p-6 shadow-sm backdrop-blur">
+          <div>
+            <h3 className="text-xl font-extrabold text-slate-900">Top Contributors of the Week</h3>
+            <p className="mt-1 text-sm font-semibold text-slate-600">
+              Based on lessons created in the last 7 days.
+            </p>
+          </div>
+
+          {loading ? (
+            <div className="mt-6">
+              <LottieLoader />
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {(users || []).filter(Boolean).map((u) => (
+                <div
+                  // ✅ FIX key warning: backend returns _id as uid
+                  key={u?._id || u?.uid || u?.email}
+                  className="group rounded-3xl border border-white/60 bg-white p-5 shadow-sm
+                             transition hover:-translate-y-1 hover:shadow-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={u?.photoURL || u?.photoUrl || FALLBACK_AVATAR}
+                      alt={u?.name || "User"}
+                      className="h-12 w-12 rounded-2xl object-cover shadow-sm"
+                      loading="lazy"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-extrabold text-slate-900">
+                        {u?.name || "Unknown"}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-600">
+                        {u?.lessons || 0} lessons
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 h-1.5 w-full rounded-full bg-slate-100">
+                    <div
+                      className="h-1.5 rounded-full bg-amber-400 transition-all"
+                      style={{ width: `${Math.min(100, (u?.lessons || 0) * 8)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && (!users || users.length === 0) && (
+            <div className="mt-6 rounded-3xl bg-slate-50 p-6 text-center">
+              <p className="text-sm font-extrabold text-slate-900">No contributors yet</p>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                Create lessons to appear here.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Most Saved Lessons ---------------- */
+function MostSavedLessonsSection() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let ignore = false;
+    (async () => {
+      try {
+        setLoading(true);
+        const data = await getMostSavedLessons();
+        if (!ignore) setRows(Array.isArray(data) ? data : []);
+      } catch {
+        if (!ignore) setRows([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+    return () => (ignore = true);
+  }, []);
+
+  // ✅ CRITICAL FIX: remove "holes" + ensure lesson exists
+  const safeRows = useMemo(() => (rows || []).filter((r) => r && r.lesson), [rows]);
+
+  return (
+    <section className="bg-gradient-to-b from-indigo-50 via-white to-white/10">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="rounded-3xl bg-white/70 p-6 shadow-sm backdrop-blur">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-extrabold text-slate-900">Most Saved Lessons</h3>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                Ranked by favorites count.
+              </p>
+            </div>
+
+            <Link
+              to="/public-lessons"
+              className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white shadow-sm transition hover:-translate-y-[1px] hover:shadow-md"
+            >
+              Explore more →
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="mt-6">
+              <LottieLoader />
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {safeRows.map((r) => {
+                const l = r?.lesson || {};
+                const key = r?.lessonId || l?._id;
+
+                return (
+                  <div
+                    key={key}
+                    className="group overflow-hidden rounded-3xl border border-white/60 bg-white shadow-sm
+                               transition hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="relative">
+                      <img
+                        src={l?.photoUrl || l?.image || FALLBACK_IMG}
+                        alt={l?.title || "Lesson"}
+                        className="h-44 w-full object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                      <div className="absolute bottom-3 left-3">
+                        <p className="text-xs font-extrabold text-white/95">
+                          🔖 {r?.saves || 0} saves
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-5">
+                      <h4 className="text-lg font-extrabold text-slate-900 line-clamp-2">
+                        {l?.title || "Untitled"}
+                      </h4>
+
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full bg-indigo-100 px-3 py-1 font-extrabold text-indigo-700">
+                          {l?.category || "Category"}
+                        </span>
+                        <span className="rounded-full bg-amber-100 px-3 py-1 font-extrabold text-amber-700">
+                          {l?.tone || l?.emotionalTone || "Tone"}
+                        </span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 font-extrabold text-slate-700">
+                          {(l?.accessLevel || "free").toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="mt-4">
+                        <Link
+                          to={`/lesson/${l?._id}`}
+                          className="text-sm font-extrabold text-indigo-700 transition group-hover:underline"
+                        >
+                          View details →
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {!loading && safeRows.length === 0 && (
+            <div className="mt-6 rounded-3xl bg-slate-50 p-6 text-center">
+              <p className="text-sm font-extrabold text-slate-900">No saves yet</p>
+              <p className="mt-1 text-sm font-semibold text-slate-600">
+                People will save lessons and they’ll appear here.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------- Page Component ---------------- */
+export default function WhyLifeMatters() {
+  return (
+    <>
+      <FeaturedLessonsSection />
+      <WhyLearningMattersSection />
+      <TopContributorsSection />
+      <MostSavedLessonsSection />
+    </>
+  );
+}
+import { Link } from "react-router-dom";
+import LottieLoader from "../../components/LottieLoader";
+import HeroSlider from "./sections/HeroSlider";
+import FeaturedLessons from "./sections/FeaturedLessons";
+import WhyLifeMatters from "./sections/WhyLifeMatters";
+import TopContributors from "./sections/TopContributors";
+import MostSavedLessons from "./sections/MostSavedLessons";
+import FeaturedLessonsCarousel from "./sections/FeaturedLessonsCarousel";
+import PricingTeaser from "./sections/PricingTeaser";
+import HotTopicsGrid from "./sections/HotTopicsGrid";
+const Home = () => {
+  return (
+    <div className="bg-slate-50 w-full">
+      
+      <HeroSlider />
+      {/* Featured slider */}
+      <FeaturedLessonsCarousel />
+
+      {/* Pricing teaser cards */}
+      <PricingTeaser />
+      <FeaturedLessons />
+      <WhyLifeMatters />
+      
+      
+      <div className="bg-white/30">
+        <TopContributors />
+        <HotTopicsGrid />
+        <MostSavedLessons />
+      </div>
+      
+    </div>
+  );
+};
+
+export default Home;
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import Swal from "sweetalert2";
+import {
+  FacebookShareButton,
+  WhatsappShareButton,
+  LinkedinShareButton,
+  FacebookIcon,
+  WhatsappIcon,
+  LinkedinIcon,
+} from "react-share";
+
+import LottieLoader from "../../components/LottieLoader";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import {
+  getLessonById,
+  getFavoritesCount,
+  getSimilarLessons,
+  toggleLike,
+} from "../../api/lessons";
+
+import { toggleFavorite } from "../../api/favorites";
+import { addComment, deleteComment, getComments } from "../../api/comments";
+import { reportLesson } from "../../api/reports";
+
+export default function LessonDetails() {
+  const { id } = useParams();
+  const { user } = useAuth();
+  const { plan, loading: planLoading } = useUserPlan(user?.uid);
+
+  const [lesson, setLesson] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [favCount, setFavCount] = useState(0);
+
+  const [comments, setComments] = useState([]);
+  const [commentText, setCommentText] = useState("");
+
+  const [similar, setSimilar] = useState([]);
+
+  const shareUrl = useMemo(() => window.location.href, []);
+  const views = useMemo(() => Math.floor(Math.random() * 10000), []);
+
+  const locked = lesson?.accessLevel === "premium" && !plan?.isPremium;
+
+  const reloadComments = async () => {
+    try {
+      const cm = await getComments(id);
+      setComments(Array.isArray(cm) ? cm : []);
+    } catch (e) {
+      toast.error(e?.message || "Failed to load comments");
+    }
+  };
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const data = await getLessonById(id);
+      setLesson(data);
+
+      const [fc, cm, sim] = await Promise.all([
+        getFavoritesCount(id),
+        getComments(id),
+        getSimilarLessons(id),
+      ]);
+
+      setFavCount(fc?.favoritesCount || 0);
+      setComments(Array.isArray(cm) ? cm : []);
+      setSimilar(Array.isArray(sim) ? sim : []);
+    } catch (e) {
+      toast.error(e?.message || "Failed to load lesson");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  if (loading || planLoading) return <LottieLoader />;
+
+  if (!lesson) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="max-w-md rounded-2xl bg-white p-6 shadow-sm text-center">
+          <h2 className="text-xl font-extrabold text-slate-900">Lesson not found</h2>
+          <Link
+            to="/public-lessons"
+            className="mt-4 inline-block font-bold text-slate-900 underline"
+          >
+            Back to lessons
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (locked) return <Navigate to="/pricing" replace state={{ from: `/lesson/${id}` }} />;
+
+  const onLike = async () => {
+    if (!user?.uid) return toast.error("Please log in to like");
+
+    try {
+      const res = await toggleLike(id, user.uid);
+      setLesson((prev) => ({ ...prev, likesCount: res?.likesCount ?? prev?.likesCount ?? 0 }));
+      toast.success("Liked updated ✅");
+    } catch (e) {
+      toast.error(e?.message || "Failed to like");
+    }
+  };
+
+  const onFavorite = async () => {
+    if (!user?.uid) return toast.error("Please log in to save");
+
+    try {
+      const res = await toggleFavorite(user.uid, id);
+      setFavCount((c) => (res?.saved ? c + 1 : Math.max(0, c - 1)));
+      toast.success(res?.saved ? "Saved to favorites 🔖" : "Suggestion removed ✅");
+    } catch (e) {
+      toast.error(e?.message || "Failed to save");
+    }
+  };
+
+  const onReport = async () => {
+    if (!user?.uid && !user?.email) return toast.error("Please log in to report");
+
+    const { value: reason } = await Swal.fire({
+      title: "Report Lesson",
+      input: "select",
+      inputOptions: {
+        "Inappropriate Content": "Inappropriate Content",
+        "Hate Speech or Harassment": "Hate Speech or Harassment",
+        "Misleading or False Information": "Misleading or False Information",
+        "Spam or Promotional Content": "Spam or Promotional Content",
+        "Sensitive or Disturbing Content": "Sensitive or Disturbing Content",
+        Other: "Other",
+      },
+      inputPlaceholder: "Select a reason",
+      showCancelButton: true,
+      confirmButtonText: "Next",
+    });
+
+    if (!reason) return;
+
+    const confirm = await Swal.fire({
+      icon: "warning",
+      title: "Confirm report?",
+      text: "Are you sure you want to report this lesson?",
+      showCancelButton: true,
+      confirmButtonText: "Yes, report",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      await reportLesson({
+        lessonId: id,
+        reporterUid: user?.uid || null,
+        reporterEmail: user?.email || null,
+        reason,
+      });
+      toast.success("Reported ✅");
+    } catch (e) {
+      toast.error(e?.message || "Failed to report");
+    }
+  };
+
+  const onPostComment = async () => {
+    if (!user?.uid) return toast.error("Please log in to comment");
+    if (!commentText.trim()) return toast.error("Write something first");
+
+    try {
+      await addComment({
+        lessonId: id,
+        uid: user.uid,
+        name: user.displayName || "User",
+        photoURL: user.photoURL || "",
+        text: commentText.trim(),
+      });
+
+      setCommentText("");
+      await reloadComments();
+      toast.success("Comment posted ✅");
+    } catch (e) {
+      toast.error(e?.message || "Failed to comment");
+    }
+  };
+
+  const onDeleteComment = async (commentId) => {
+    if (!user?.uid) return toast.error("Please log in");
+
+    const confirm = await Swal.fire({
+      icon: "warning",
+      title: "Delete comment?",
+      text: "This action cannot be undone.",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      await deleteComment(commentId, user.uid);
+      setComments((prev) => prev.filter((c) => String(c._id) !== String(commentId)));
+      toast.success("Comment deleted ✅");
+    } catch (e) {
+      toast.error(e?.message || "Failed to delete");
+    }
+  };
+
+  return (
+    <section className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-5xl px-4 py-10">
+        {/* Lesson card */}
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          {/* Header */}
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-extrabold text-slate-900">{lesson.title}</h1>
+              <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full bg-indigo-100 px-3 py-1 font-extrabold text-indigo-700">
+                  {lesson.category}
+                </span>
+                <span className="rounded-full bg-amber-100 px-3 py-1 font-extrabold text-amber-700">
+                  {lesson.tone}
+                </span>
+                <span className="rounded-full bg-slate-100 px-3 py-1 font-extrabold text-slate-700">
+                  {(lesson.accessLevel || "free").toUpperCase()}
+                </span>
+                <span className="rounded-full bg-emerald-100 px-3 py-1 font-extrabold text-emerald-700">
+                  {lesson.visibility?.toUpperCase() || "PUBLIC"}
+                </span>
+              </div>
+            </div>
+
+            {/* Author card */}
+            <div className="rounded-2xl bg-slate-50 p-4">
+              <div className="flex items-center gap-3">
+                <img
+                  src={lesson?.creator?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
+                  alt="creator"
+                  className="h-11 w-11 rounded-2xl object-cover"
+                />
+                <div>
+                  <p className="text-sm font-extrabold text-slate-900">
+                    {lesson?.creator?.name || "Unknown"}
+                  </p>
+                  <p className="text-xs font-semibold text-slate-600">
+                    {lesson.createdAt ? new Date(lesson.createdAt).toLocaleString() : ""}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Image */}
+          {lesson.photoUrl && (
+            <div className="mt-5 overflow-hidden rounded-3xl border bg-slate-50">
+              <img
+                src={lesson.photoUrl}
+                alt="lesson"
+                className="w-full max-h-[420px] object-cover"
+              />
+            </div>
+          )}
+
+          {/* Content */}
+          <p className="mt-5 whitespace-pre-line text-slate-700 leading-relaxed">
+            {lesson.description}
+          </p>
+
+          {/* Stats */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <span className="rounded-2xl bg-white ring-1 ring-slate-200 px-4 py-2 text-sm font-extrabold text-slate-900">
+              ❤️ {lesson.likesCount || 0} Likes
+            </span>
+            <span className="rounded-2xl bg-white ring-1 ring-slate-200 px-4 py-2 text-sm font-extrabold text-slate-900">
+              🔖 {favCount} Favorites
+            </span>
+            <span className="rounded-2xl bg-white ring-1 ring-slate-200 px-4 py-2 text-sm font-extrabold text-slate-900">
+              💬 {comments.length} Comments
+            </span>
+            <span className="rounded-2xl bg-white ring-1 ring-slate-200 px-4 py-2 text-sm font-extrabold text-slate-900">
+              👁 {views} Views
+            </span>
+          </div>
+
+          {/* Buttons */}
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <button
+              onClick={onFavorite}
+              className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white"
+              type="button"
+            >
+              🔖 Save
+            </button>
+            <button
+              onClick={onLike}
+              className="rounded-2xl bg-rose-100 px-4 py-2 text-sm font-extrabold text-rose-700"
+              type="button"
+            >
+              ❤️ Like
+            </button>
+            <button
+              onClick={onReport}
+              className="rounded-2xl bg-amber-100 px-4 py-2 text-sm font-extrabold text-amber-800"
+              type="button"
+            >
+              🚩 Report
+            </button>
+
+            {/* Share */}
+            <div className="ml-auto flex items-center gap-2">
+              <FacebookShareButton url={shareUrl} quote={lesson.title}>
+                <FacebookIcon size={36} round />
+              </FacebookShareButton>
+              <WhatsappShareButton url={shareUrl} title={lesson.title}>
+                <WhatsappIcon size={36} round />
+              </WhatsappShareButton>
+              <LinkedinShareButton url={shareUrl} title={lesson.title}>
+                <LinkedinIcon size={36} round />
+              </LinkedinShareButton>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <Link to="/public-lessons" className="text-sm font-extrabold text-slate-900 underline">
+              ← Back to lessons
+            </Link>
+          </div>
+        </div>
+
+        {/* Comments */}
+        <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-extrabold text-slate-900">Comments</h2>
+
+          <div className="mt-4 flex gap-2">
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Write a comment..."
+              className="flex-1 rounded-2xl border px-4 py-2 text-sm font-semibold"
+            />
+            <button
+              onClick={onPostComment}
+              className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white"
+              type="button"
+            >
+              Post
+            </button>
+          </div>
+
+          <div className="mt-5 space-y-3">
+            {comments.map((c) => (
+              <div key={c._id} className="rounded-2xl bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={c.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
+                      alt="user"
+                      className="h-9 w-9 rounded-2xl object-cover"
+                    />
+                    <div>
+                      <p className="text-sm font-extrabold text-slate-900">{c.name || "User"}</p>
+                      <p className="text-xs font-semibold text-slate-600">
+                        {c.createdAt ? new Date(c.createdAt).toLocaleString() : ""}
+                      </p>
+                    </div>
+                  </div>
+
+                  {user?.uid && c.uid === user.uid && (
+                    <button
+                      onClick={() => onDeleteComment(c._id)}
+                      className="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-700"
+                      type="button"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+
+                <p className="mt-2 text-sm font-semibold text-slate-700">{c.text}</p>
+              </div>
+            ))}
+
+            {!comments.length && (
+              <p className="text-sm font-semibold text-slate-600 mt-2">
+                No comments yet. Be the first!
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Similar */}
+        <div className="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-extrabold text-slate-900">Similar & Recommended</h2>
+
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {similar.map((l) => (
+              <Link
+                key={l._id}
+                to={`/lesson/${l._id}`}
+                className="rounded-2xl border bg-white p-4 shadow-sm hover:shadow-md transition"
+              >
+                <p className="text-sm font-extrabold text-slate-900 line-clamp-2">{l.title}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-600 line-clamp-2">
+                  {l.description}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+                  <span className="rounded-full bg-indigo-100 px-2 py-1 font-extrabold text-indigo-700">
+                    {l.category}
+                  </span>
+                  <span className="rounded-full bg-amber-100 px-2 py-1 font-extrabold text-amber-700">
+                    {l.tone}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {!similar.length && (
+            <p className="mt-3 text-sm font-semibold text-slate-600">No similar lessons found.</p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+import { Link } from "react-router-dom";
+import Swal from "sweetalert2";
+import { useEffect } from "react";
+
+export default function PaymentCancel() {
+  useEffect(() => {
+    Swal.fire({
+      icon: "info",
+      title: "Payment Canceled",
+      text: "No worries — you can try again anytime.",
+    });
+  }, []);
+
+  return (
+    <div className="min-h-[calc(100vh-80px)] flex items-center justify-center px-4">
+      <div className="rounded-2xl bg-white p-6 shadow-sm text-center">
+        <h2 className="text-xl font-extrabold text-slate-900">Payment canceled</h2>
+        <p className="mt-2 text-sm text-slate-600">You are still on Free plan.</p>
+        <Link to="/pricing" className="mt-4 inline-block rounded-lg bg-slate-900 px-4 py-2 text-white font-bold">
+          Back to Pricing
+        </Link>
+      </div>
+    </div>
+  );
+}
+import { useEffect, useRef } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import Swal from "sweetalert2";
+import { toast } from "react-toastify";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+
+const API = import.meta.env.VITE_API_URL;
+
+export default function PaymentSuccess() {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const sessionId = params.get("session_id");
+  const { user } = useAuth();
+
+  const { plan, loading, refetch } = useUserPlan(user?.uid);
+
+
+  const shownRef = useRef(false);
+
+  // Call confirm once 
+  useEffect(() => {
+    if (!user?.uid || !sessionId) return;
+
+    (async () => {
+      try {
+        await fetch(`${API}/payments/confirm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        }).catch(() => {});
+      } finally {
+        refetch?.(); 
+      }
+    })();
+  }, [user?.uid, sessionId, refetch]);
+
+  //  When plan becomes premium SweetAlert 
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return;
+    if (shownRef.current) return;
+
+    if (plan?.isPremium) {
+      shownRef.current = true;
+
+      Swal.fire({
+        icon: "success",
+        title: "Payment Successful ✅",
+        text: "Premium activated! Enjoy premium lessons ⭐",
+        confirmButtonText: "Go to Profile",
+      }).then(() => {
+        toast.success("Premium activated ⭐");
+        navigate("/dashboard/profile", { replace: true });
+      });
+    }
+  }, [loading, plan?.isPremium, user, navigate]);
+
+  if (!user) {
+    return (
+      <div className="min-h-[calc(100vh-80px)] flex items-center justify-center px-4">
+        <div className="rounded-2xl bg-white p-6 shadow-sm text-center">
+          <h2 className="text-xl font-extrabold text-slate-900">Login required</h2>
+          <p className="mt-2 text-sm text-slate-600">Please login to confirm premium.</p>
+          <Link
+            to="/login"
+            className="mt-4 inline-block rounded-lg bg-slate-900 px-4 py-2 text-white font-bold"
+          >
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-80px)] flex items-center justify-center px-4">
+      <div className="max-w-md rounded-2xl bg-white p-6 shadow-sm text-center">
+        <h2 className="text-xl font-extrabold text-slate-900">Processing payment…</h2>
+
+        <p className="mt-2 text-sm text-slate-600">
+          Session: <span className="font-mono text-xs">{sessionId || "N/A"}</span>
+        </p>
+
+        <button
+          onClick={() => {
+            toast.info("Refreshing premium status…");
+            refetch?.();
+          }}
+          className="mt-5 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white"
+        >
+          Refresh Premium Status
+        </button>
+
+        <Link
+          to="/pricing?refresh=1"
+          className="mt-4 block text-sm font-bold text-primary hover:underline"
+        >
+          Back to Pricing
+        </Link>
+
+        <p className="mt-3 text-xs text-slate-500">
+          If webhook is delayed, press refresh once.
+        </p>
+      </div>
+    </div>
+  );
+}
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import GradientButton from "../../components/GradientButton";
+import { startCheckout } from "../../api/stripe";
+
+const Pricing = () => {
+  const { user } = useAuth();
+  const { plan, loading, refetch } = useUserPlan(user?.uid);
+  const [params] = useSearchParams();
+
+  useEffect(() => {
+    if (params.get("refresh") === "1") {
+      refetch?.();
+    }
+  }, [params, refetch]);
+
+  const isPremium = !!plan?.isPremium;
+
+  const handleUpgrade = async () => {
+    if (!user?.uid || !user?.email) {
+      toast.error("Please login first");
+      return;
+    }
+
+    try {
+      await startCheckout({ uid: user.uid, email: user.email });
+    } catch (err) {
+      toast.error(err?.message || "Checkout failed");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="rounded-3xl bg-white/80 p-6 shadow-sm backdrop-blur">
+          Loading pricing...
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-80px)] bg-[radial-gradient(1000px_600px_at_10%_10%,rgba(99,102,241,.18),transparent),radial-gradient(900px_500px_at_90%_15%,rgba(236,72,153,.16),transparent),linear-gradient(180deg,#f8fafc,white)]">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="rounded-[32px] bg-white/70 p-6 shadow-sm backdrop-blur sm:p-8">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 py-1 text-xs font-extrabold tracking-widest text-slate-700 shadow-sm">
+                PRICING <span className="text-slate-400">›</span> UPGRADE
+              </p>
+              <h1 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
+                Lifetime Premium
+              </h1>
+              <p className="mt-2 max-w-2xl text-sm font-semibold text-slate-600">
+                One-time payment for lifetime premium access. Unlock Premium lessons and Premium creation.
+              </p>
+            </div>
+
+            {isPremium ? (
+              <span className="rounded-full bg-amber-100 px-4 py-2 text-sm font-extrabold text-amber-800">
+                Premium ⭐ Activated
+              </span>
+            ) : (
+              <GradientButton variant="pinkRed" onClick={handleUpgrade}>
+                Upgrade now (৳1500 / Lifetime)
+              </GradientButton>
+            )}
+          </div>
+
+          {/*  UI cards */}
+          <div className="mt-8 rounded-3xl bg-white/70 p-5 text-sm font-semibold text-slate-600">
+            <p>
+              🔺 After successful payment, Premium status is activated via Stripe webhook.
+              If it doesn’t update instantly, press refresh once.
+            </p>
+
+            {!isPremium && (
+              <button
+                className="mt-4 rounded-lg bg-primary px-4 py-2 text-white font-bold"
+                onClick={() => {
+                  toast.info("Refreshing premium status…");
+                  refetch?.();
+                }}
+              >
+                Refresh premium status
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Pricing;
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import LottieLoader from "../../components/LottieLoader";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import { getPublicLessons } from "../../api/lessons";
+
+const PublicLessons = () => {
+  const { user } = useAuth();
+  const { plan, loading: planLoading } = useUserPlan(user?.uid);
+
+  const [lessons, setLessons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    let ignore = false;
+
+    (async () => {
+      try {
+        setLoading(true);
+        setErr("");
+        const data = await getPublicLessons(); // ✅ already array
+        if (!ignore) setLessons(data);
+      } catch (e) {
+        if (!ignore) setErr(e.message || "Failed to load lessons");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    })();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  if (loading || planLoading) return <LottieLoader />;
+
+  return (
+    <section className="bg-slate-50 min-h-screen">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <h1 className="text-3xl font-extrabold text-slate-900">Public Life Lessons</h1>
+        <p className="mt-2 text-sm text-slate-600">
+          Explore wisdom shared by the community.
+        </p>
+
+        {err && (
+          <div className="mt-6 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {err}
+          </div>
+        )}
+
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {lessons.map((lesson) => {
+            const isLocked =
+              lesson.accessLevel === "premium" && !plan?.isPremium;
+
+            return (
+              <div
+                key={lesson._id} // ✅ key fixed
+                className="relative overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+              >
+                {isLocked && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur">
+                    <span className="text-2xl">🔒</span>
+                    <p className="mt-2 text-sm font-bold text-slate-800">
+                      Premium Lesson
+                    </p>
+                    <Link
+                      to="/pricing"
+                      className="mt-2 rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white"
+                    >
+                      Upgrade to view
+                    </Link>
+                  </div>
+                )}
+
+                <div className={isLocked ? "blur-sm" : ""}>
+                  <div className="p-5">
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {lesson.title}
+                    </h3>
+
+                    <p className="mt-2 text-sm text-slate-600 line-clamp-3">
+                      {lesson.description}
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full bg-indigo-100 px-2 py-1 font-semibold text-indigo-700">
+                        {lesson.category}
+                      </span>
+                      <span className="rounded-full bg-amber-100 px-2 py-1 font-semibold text-amber-700">
+                        {lesson.tone}
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-600">
+                        {(lesson.accessLevel || "free").toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-3">
+                      <img
+                        src={
+                          lesson?.creator?.photoURL ||
+                          "https://i.ibb.co/ZxK3f6K/user.png"
+                        }
+                        alt="creator"
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                      <div>
+                        <p className="text-xs font-semibold text-slate-800">
+                          {lesson?.creator?.name || "Unknown"}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          {lesson.createdAt
+                            ? new Date(lesson.createdAt).toLocaleDateString()
+                            : ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    {!isLocked && (
+                      <div className="mt-4">
+                        <Link
+                          to={`/lesson/${lesson._id}`}
+                          className="text-sm font-bold text-primary hover:underline"
+                        >
+                          See details →
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {!lessons.length && !err && (
+          <div className="mt-10 rounded-2xl bg-white p-6 text-center shadow-sm">
+            <p className="text-lg font-extrabold text-slate-900">
+              No public lessons yet
+            </p>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+};
+
+export default PublicLessons;
+------------------------------------ROUTES---
+import { Navigate, useLocation } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
+import useUserPlan from "../hooks/useUserPlan";
+import LottieLoader from "../components/LottieLoader";
+
+export default function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const { plan, loading: planLoading } = useUserPlan(user?.uid);
+
+  if (loading || planLoading) return <LottieLoader />;
+
+  if (!user) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+
+  if (plan?.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+}
+import { Navigate, useLocation } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
+import useUserPlan from "../hooks/useUserPlan";
+import LottieLoader from "../components/LottieLoader";
+
+export default function PremiumRoute({ children }) {
+  const location = useLocation();
+  const { user, loading: authLoading } = useAuth();
+
+  const uid = user?.uid;
+  const { plan, loading: planLoading } = useUserPlan(uid);
+
+  if (authLoading || planLoading) return <LottieLoader />;
+
+  // Not logged in 
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
+  // Not premium
+  if (!plan?.isPremium) {
+    return <Navigate to="/pricing" state={{ from: location.pathname }} replace />;
+  }
+
+  return children;
+}
+import { Navigate, useLocation } from "react-router-dom";
+import useAuth from "../hooks/useAuth";
+import LottieLoader from "../components/LottieLoader";
+
+const PrivateRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) return <LottieLoader />;
+
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: location.pathname }}
+      />
+    );
+  }
+
+  return children;
+};
+
+export default PrivateRoute;
+import { createBrowserRouter } from "react-router-dom";
+import MainLayout from "../layouts/MainLayout";
+import AuthLayout from "../layouts/AuthLayout";
+import DashboardLayout from "../layouts/DashboardLayout";
+import Home from "../pages/Home/Home";
+import PublicLessons from "../pages/PublicLessons/PublicLessons";
+import LessonDetails from "../pages/LessonDetails/LessonDetails";
+import Pricing from "../pages/Pricing/Pricing";
+import NotFound from "../pages/Error/NotFound";
+import Login from "../pages/Auth/Login/Login";
+import Register from "../pages/Auth/Register/Register";
+import DashboardHome from "../pages/Dashboard/DashboardHome";
+import AddLesson from "../pages/Dashboard/AddLesson";
+import MyLessons from "../pages/Dashboard/MyLessons";
+import MyFavorites from "../pages/Dashboard/MyFavorites";
+import Profile from "../pages/Dashboard/Profile";
+import PrivateRoute from "./PrivateRoute";
+import AdminRoute from "./AdminRoute";
+import Admin from "../pages/Dashboard/Admin";
+import AdminHome from "../pages/Dashboard/AdminHome";
+import AdminProfile from "../pages/Dashboard/AdminProfile";
+import ManageUsers from "../pages/Dashboard/ManageUsers";
+import ManageLessons from "../pages/Dashboard/ManageLessons";
+import ReportedLessons from "../pages/Dashboard/ReportedLessons";
+import PaymentSuccess from "../pages/Payment/PaymentSuccess";
+import PaymentCancel from "../pages/Payment/PaymentCancel";
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <MainLayout />,
+    errorElement: <NotFound />,
+    children: [
+      { index: true, element: <Home /> },
+      { path: "public-lessons", element: <PublicLessons /> },
+
+    
+      { path: "pricing", element: <Pricing /> },
+
+
+      { path: "payment-success", element: <PaymentSuccess /> },
+      { path: "payment-cancel", element: <PaymentCancel /> },
+
+      {
+        path: "lesson/:id",
+        element: (
+          <PrivateRoute>
+            <LessonDetails />
+          </PrivateRoute>
+        ),
+      },
+
+      {
+        path: "dashboard",
+        element: (
+          <PrivateRoute>
+            <DashboardLayout />
+          </PrivateRoute>
+        ),
+        children: [
+          { index: true, element: <DashboardHome /> },
+          { path: "add-lesson", element: <AddLesson /> },
+          { path: "my-lessons", element: <MyLessons /> },
+          { path: "my-favorites", element: <MyFavorites /> },
+          { path: "profile", element: <Profile /> },
+
+          {
+            path: "admin",
+            element: (
+              <AdminRoute>
+                <Admin />
+              </AdminRoute>
+            ),
+            children: [
+              { index: true, element: <AdminHome /> },
+              { path: "profile", element: <AdminProfile /> },
+              { path: "manage-users", element: <ManageUsers /> },
+              { path: "manage-lessons", element: <ManageLessons /> },
+              { path: "reported-lessons", element: <ReportedLessons /> },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    path: "/",
+    element: <AuthLayout />,
+    children: [
+      { path: "login", element: <Login /> },
+      { path: "register", element: <Register /> },
+    ],
+  },
+]);
+
+export default router;
+import { Routes, Route } from "react-router-dom";
+import MainLayout from "./layouts/MainLayout";
+
+import Home from "./pages/Home";
+import PublicLessons from "./pages/PublicLessons/PublicLessons";
+import Login from "./pages/Auth/Login/Login";
+import Register from "./pages/Auth/Register/Register";
+
+import PrivateRoute from "./routes/PrivateRoute";
+import DashboardLayout from "./layouts/DashboardLayout";
+import DashboardHome from "./pages/Dashboard/DashboardHome";
+import AddLesson from "./pages/Dashboard/AddLesson";
+import MyLessons from "./pages/Dashboard/MyLessons";
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<Home />} />
+        <Route path="public-lessons" element={<PublicLessons />} />
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
+
+        {/* Dashboard*/}
+        <Route
+          path="dashboard"
+          element={
+            <PrivateRoute>
+              <DashboardLayout />
+            </PrivateRoute>
+          }
+        >
+          <Route index element={<DashboardHome />} />
+          <Route path="add-lesson" element={<AddLesson />} />
+          <Route path="my-lessons" element={<MyLessons />} />
+        </Route>
+      </Route>
+    </Routes>
+  );
+}
+
+export default App;
+import { Routes, Route } from "react-router-dom";
+import MainLayout from "./layouts/MainLayout";
+
+import Home from "./pages/Home";
+import PublicLessons from "./pages/PublicLessons/PublicLessons";
+import Login from "./pages/Auth/Login/Login";
+import Register from "./pages/Auth/Register/Register";
+
+import PrivateRoute from "./routes/PrivateRoute";
+import DashboardLayout from "./layouts/DashboardLayout";
+import DashboardHome from "./pages/Dashboard/DashboardHome";
+import AddLesson from "./pages/Dashboard/AddLesson";
+import MyLessons from "./pages/Dashboard/MyLessons";
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<MainLayout />}>
+        <Route index element={<Home />} />
+        <Route path="public-lessons" element={<PublicLessons />} />
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
+
+        {/* Dashboard*/}
+        <Route
+          path="dashboard"
+          element={
+            <PrivateRoute>
+              <DashboardLayout />
+            </PrivateRoute>
+          }
+        >
+          <Route index element={<DashboardHome />} />
+          <Route path="add-lesson" element={<AddLesson />} />
+          <Route path="my-lessons" element={<MyLessons />} />
+        </Route>
+      </Route>
+    </Routes>
+  );
+}
+
+export default App;
+@import "tailwindcss";
+@plugin "daisyui";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  min-height: 100vh;
+  color: #0f172a;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+
+  /* gradient background */
+  background: linear-gradient(
+    90deg,
+    #f6f2ff 0%,
+    #fdf7f2 30%,
+    #f1f9ff 60%,
+    #eef6f3 100%
+  );
+
+  background-attachment: fixed;
+}
+
+
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { RouterProvider } from "react-router-dom";
+import "./index.css";
+import router from "./routes/router";
+import AuthProvider from "./context/AuthProvider";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode>
+    <AuthProvider>
+      <RouterProvider router={router} />
+      <ToastContainer position="top-right" autoClose={2000} />
+    </AuthProvider>
+  </React.StrictMode>
+);

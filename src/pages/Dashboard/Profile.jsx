@@ -25,32 +25,32 @@ const LessonCard = ({ lesson }) => {
       <div className="relative p-5">
         <div className="flex items-center justify-between gap-2">
           <span className="rounded-xl bg-slate-900 px-2.5 py-1 text-[10px] font-extrabold tracking-widest text-white">
-            {(lesson.accessLevel || "free").toUpperCase()}
+            {(lesson?.accessLevel || "free").toUpperCase()}
           </span>
           <span className="text-xs font-semibold text-slate-500">{created}</span>
         </div>
 
         <h3 className="mt-3 line-clamp-2 text-lg font-extrabold text-slate-900">
-          {lesson.title}
+          {lesson?.title || "Untitled"}
         </h3>
 
         <p className="mt-2 line-clamp-3 text-sm text-slate-600">
-          {lesson.description}
+          {lesson?.description || "No description"}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700">
-            {lesson.category || "General"}
+            {lesson?.category || "General"}
           </span>
           <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">
-            {lesson.tone || lesson.emotionalTone || "Neutral"}
+            {lesson?.tone || lesson?.emotionalTone || "Neutral"}
           </span>
         </div>
 
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src={lesson?.creator?.photo || "https://i.ibb.co/ZxK3f6K/user.png"}
+              src={lesson?.creator?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
               alt="creator"
               className="h-9 w-9 rounded-2xl object-cover"
             />
@@ -59,13 +59,13 @@ const LessonCard = ({ lesson }) => {
                 {lesson?.creator?.name || "You"}
               </p>
               <p className="text-xs font-semibold text-slate-500">
-                ❤️ {lesson.likesCount || 0} • 🔖 {lesson.favoritesCount || 0}
+                ❤️ {lesson?.likesCount || 0}
               </p>
             </div>
           </div>
 
           <Link
-            to={`/lesson/${lesson._id}`}
+            to={`/lesson/${lesson?._id}`}
             className="text-sm font-extrabold text-primary hover:underline"
           >
             See details →
@@ -76,7 +76,7 @@ const LessonCard = ({ lesson }) => {
   );
 };
 
-const Profile = () => {
+export default function Profile() {
   const navigate = useNavigate();
   const { user, loading: authLoading, updateUserProfile } = useAuth();
 
@@ -84,13 +84,11 @@ const Profile = () => {
 
   const isPremium = !!data?.user?.isPremium;
 
-  const counts = useMemo(() => {
-    return {
-      lessonsCreated: data?.counts?.publicLessons ?? 0,
-      totalLikes: data?.counts?.likes ?? 0,
-      totalSaved: data?.counts?.favorites ?? 0,
-    };
-  }, [data]);
+  const counts = useMemo(() => ({
+    lessonsCreated: data?.counts?.publicLessons ?? 0,
+    totalLikes: data?.counts?.likes ?? 0,
+    totalSaved: data?.counts?.favorites ?? 0,
+  }), [data]);
 
   // Edit form
   const [editing, setEditing] = useState(false);
@@ -98,19 +96,22 @@ const Profile = () => {
   const [photo, setPhoto] = useState(user?.photoURL || "");
   const [saving, setSaving] = useState(false);
 
-  //public lessons list 
+  // Public lessons list
   const [myPublicLessons, setMyPublicLessons] = useState([]);
   const [lessonsLoading, setLessonsLoading] = useState(true);
+  const [lessonsErr, setLessonsErr] = useState("");
 
   useEffect(() => {
     setName(user?.displayName || "");
     setPhoto(user?.photoURL || "");
   }, [user?.displayName, user?.photoURL]);
 
+  // ✅ SINGLE useEffect (no nesting)
   useEffect(() => {
     if (!user?.uid) {
       setMyPublicLessons([]);
       setLessonsLoading(false);
+      setLessonsErr("");
       return;
     }
 
@@ -119,25 +120,29 @@ const Profile = () => {
     (async () => {
       try {
         setLessonsLoading(true);
+        setLessonsErr("");
+
         const res = await fetch(`${API}/lessons/my?uid=${user.uid}`);
-        const json = await res.json();
+        const json = await res.json().catch(() => []);
+
         if (!res.ok) throw new Error(json?.message || "Failed to load your lessons");
 
         const onlyPublic = (Array.isArray(json) ? json : [])
-          .filter((l) => l.visibility === "public")
+          .filter((l) => l?.visibility === "public")
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         if (!ignore) setMyPublicLessons(onlyPublic);
-      } catch {
-        if (!ignore) setMyPublicLessons([]);
+      } catch (e) {
+        if (!ignore) {
+          setMyPublicLessons([]);
+          setLessonsErr(e?.message || "Failed to load lessons");
+        }
       } finally {
         if (!ignore) setLessonsLoading(false);
       }
     })();
 
-    return () => {
-      ignore = true;
-    };
+    return () => { ignore = true; };
   }, [user?.uid]);
 
   const handleSave = async (e) => {
@@ -153,14 +158,13 @@ const Profile = () => {
 
   if (authLoading || loading) return <LottieLoader />;
 
-  // If "User not found"
   if (error) {
     return (
       <div className="min-h-[calc(100vh-80px)] w-full px-4 py-6">
         <div className="mx-auto max-w-4xl rounded-2xl bg-red-50 p-6 text-sm font-semibold text-red-700">
           {error}
           <p className="mt-2 text-xs font-bold text-red-800">
-            If it says “User not found”, logout → login again (upsert runs on login).
+            If it says “User not found”, logout → login again.
           </p>
         </div>
       </div>
@@ -220,10 +224,7 @@ const Profile = () => {
                 </div>
 
                 {editing && (
-                  <form
-                    onSubmit={handleSave}
-                    className="mt-5 grid gap-3 rounded-2xl bg-white p-4 shadow-sm"
-                  >
+                  <form onSubmit={handleSave} className="mt-5 grid gap-3 rounded-2xl bg-white p-4 shadow-sm">
                     <div className="grid gap-2 md:grid-cols-2">
                       <label className="text-xs font-extrabold text-slate-600">
                         Display name
@@ -247,11 +248,7 @@ const Profile = () => {
                     </div>
 
                     <div className="flex gap-3">
-                      <GradientButton
-                        variant="greenBlue"
-                        disabled={saving}
-                        className="disabled:opacity-60"
-                      >
+                      <GradientButton variant="greenBlue" disabled={saving} className="disabled:opacity-60">
                         {saving ? "Saving..." : "Save changes"}
                       </GradientButton>
 
@@ -279,21 +276,15 @@ const Profile = () => {
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Lessons</p>
-                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {counts.lessonsCreated}
-                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">{counts.lessonsCreated}</p>
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Saved</p>
-                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {counts.totalSaved}
-                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">{counts.totalSaved}</p>
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Likes</p>
-                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
-                    {counts.totalLikes}
-                  </p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">{counts.totalLikes}</p>
                 </div>
               </div>
             </div>
@@ -305,20 +296,13 @@ const Profile = () => {
           <StatCard
             label="TOTAL PUBLIC LESSONS"
             value={counts.lessonsCreated}
-            pill={
-              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-extrabold text-indigo-700">
-                Newest first
-              </span>
-            }
+            pill={<span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-extrabold text-indigo-700">Newest first</span>}
           />
           <StatCard
             label="TOTAL SAVED (FAVORITES)"
             value={counts.totalSaved}
             pill={
-              <Link
-                to="/dashboard/my-favorites"
-                className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white"
-              >
+              <Link to="/dashboard/my-favorites" className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white">
                 View
               </Link>
             }
@@ -328,9 +312,7 @@ const Profile = () => {
             value={isPremium ? "YES" : "NO"}
             pill={
               isPremium ? (
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
-                  Premium ⭐
-                </span>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">Premium ⭐</span>
               ) : (
                 <button
                   onClick={() => navigate("/pricing")}
@@ -348,9 +330,7 @@ const Profile = () => {
           <div className="rounded-[32px] bg-white/50 p-6 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-extrabold text-slate-900">
-                  Your public lessons
-                </h2>
+                <h2 className="text-2xl font-extrabold text-slate-900">Your public lessons</h2>
                 <p className="mt-1 text-sm font-semibold text-slate-600">
                   Loaded from MongoDB (newest first).
                 </p>
@@ -362,14 +342,14 @@ const Profile = () => {
             </div>
 
             {lessonsLoading ? (
-              <div className="mt-6">
-                <LottieLoader />
+              <div className="mt-6"><LottieLoader /></div>
+            ) : lessonsErr ? (
+              <div className="mt-6 rounded-3xl bg-red-50 p-6 text-sm font-semibold text-red-700">
+                {lessonsErr}
               </div>
             ) : myPublicLessons.length === 0 ? (
               <div className="mt-6 rounded-3xl bg-white p-6 text-center shadow-sm">
-                <p className="text-lg font-extrabold text-slate-900">
-                  No public lessons yet
-                </p>
+                <p className="text-lg font-extrabold text-slate-900">No public lessons yet</p>
                 <p className="mt-1 text-sm font-semibold text-slate-600">
                   Create your first public lesson and share your wisdom.
                 </p>
@@ -391,6 +371,5 @@ const Profile = () => {
       </div>
     </div>
   );
-};
+}
 
-export default Profile;

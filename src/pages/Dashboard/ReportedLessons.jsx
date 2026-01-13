@@ -1,173 +1,207 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
+import useAuth from "../../hooks/useAuth";
+import useUserPlan from "../../hooks/useUserPlan";
+import { createLesson } from "../../api/lessons";
+import { Link, useNavigate } from "react-router-dom";
 import LottieLoader from "../../components/LottieLoader";
-import { deleteLessonAdmin, getReportedLessons, ignoreReports } from "../../api/admin";
 
-export default function ReportedLessons() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(null); 
+export default function AddLesson() {
+  const { user } = useAuth();
+  const { plan, loading } = useUserPlan(user?.uid);
+  const isPremium = !!plan?.isPremium;
+  const navigate = useNavigate();
 
-  const load = async () => {
-    try {
-      setLoading(true);
-      const data = await getReportedLessons();
-      setRows(Array.isArray(data) ? data : []);
-    } catch (e) {
-      toast.error(e.message || "Failed to load reports");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  const onDeleteLesson = async (lessonId) => {
-    const ok = window.confirm("Delete this lesson permanently?");
-    if (!ok) return;
-
-    try {
-      await deleteLessonAdmin(lessonId);
-      toast.success("Lesson deleted ✅");
-      setRows((prev) => prev.filter((x) => x.lessonId !== lessonId));
-    } catch (e) {
-      toast.error(e.message || "Failed to delete");
-    }
-  };
-
-  const onIgnore = async (lessonId) => {
-    const ok = window.confirm("Ignore reports for this lesson (clear reports)?");
-    if (!ok) return;
-
-    try {
-      await ignoreReports(lessonId);
-      toast.success("Reports cleared ✅");
-      setRows((prev) => prev.filter((x) => x.lessonId !== lessonId));
-      setOpen(null);
-    } catch (e) {
-      toast.error(e.message || "Failed to clear reports");
-    }
-  };
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("Personal Growth");
+  const [tone, setTone] = useState("Motivational");
+  const [visibility, setVisibility] = useState("public");
+  const [accessLevel, setAccessLevel] = useState("free");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [saving, setSaving] = useState(false);
 
   if (loading) return <LottieLoader />;
 
+  const onSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!user?.uid) {
+      toast.error("Please login first");
+      return;
+    }
+
+    // Free user cannot post premium lessons, but can post FREE
+    if (accessLevel === "premium" && !isPremium) {
+      toast.error("Upgrade to Premium to create premium lessons");
+      return;
+    }
+
+    const lesson = {
+      title,
+      description,
+      category,
+      tone,
+      visibility,
+      accessLevel: isPremium ? accessLevel : "free", 
+      photoUrl: photoUrl || "",
+      creator: {
+        uid: user.uid,
+        email: user.email,
+        name: user.displayName || "",
+        photoURL: user.photoURL || "",
+      },
+    };
+
+    try {
+      setSaving(true);
+      await createLesson(lesson);
+      toast.success("Lesson added successfully ✅");
+
+      setTitle("");
+      setDescription("");
+      setCategory("Personal Growth");
+      setTone("Motivational");
+      setVisibility("public");
+      setAccessLevel("free");
+      setPhotoUrl("");
+
+      navigate("/dashboard/my-lessons");
+    } catch (err) {
+      toast.error(err?.message || "Failed to create lesson");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div className="rounded-3xl bg-white p-6 shadow-sm">
-      <h1 className="text-xl font-extrabold text-slate-900">Reported Lessons</h1>
-      <p className="mt-1 text-sm font-semibold text-slate-600">
-        Table + modal reasons + actions.
-      </p>
+    <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-extrabold text-slate-900">Add New Lesson</h1>
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="text-left text-slate-600">
-            <tr className="border-b">
-              <th className="py-3 pr-3 font-extrabold">Lesson</th>
-              <th className="py-3 pr-3 font-extrabold">Creator</th>
-              <th className="py-3 pr-3 font-extrabold">Reports</th>
-              <th className="py-3 pr-3 font-extrabold">Actions</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.lessonId} className="border-b last:border-b-0">
-                <td className="py-3 pr-3 font-bold text-slate-900">
-                  {r.lesson?.title || "Lesson missing"}
-                </td>
-                <td className="py-3 pr-3">
-                  {r.lesson?.creator?.name || "Unknown"}
-                </td>
-                <td className="py-3 pr-3">
-                  <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-extrabold text-rose-700">
-                    {r.reportCount}
-                  </span>
-                </td>
-                <td className="py-3 pr-3 flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setOpen(r.lessonId)}
-                    className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-extrabold text-white"
-                    type="button"
-                  >
-                    View reasons
-                  </button>
-
-                  <button
-                    onClick={() => onDeleteLesson(r.lessonId)}
-                    className="rounded-xl bg-rose-100 px-3 py-1.5 text-xs font-extrabold text-rose-700"
-                    type="button"
-                  >
-                    Delete lesson
-                  </button>
-
-                  <button
-                    onClick={() => onIgnore(r.lessonId)}
-                    className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-extrabold text-slate-700"
-                    type="button"
-                  >
-                    Ignore
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {!rows.length && (
-          <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-center">
-            <p className="font-extrabold text-slate-900">No reported lessons</p>
-          </div>
+        {!isPremium && (
+          <Link
+            to="/pricing"
+            className="rounded-xl bg-amber-100 px-4 py-2 text-sm font-extrabold text-amber-800"
+            title="Upgrade to create premium lessons"
+          >
+            Upgrade to Premium ⭐
+          </Link>
         )}
       </div>
 
-      {/* Modal */}
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
-          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-extrabold text-slate-900">Report reasons</h3>
-              <button
-                onClick={() => setOpen(null)}
-                className="rounded-xl bg-slate-100 px-3 py-2 text-sm font-extrabold"
-                type="button"
-              >
-                ✕
-              </button>
-            </div>
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        <input
+          required
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Lesson Title"
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
 
-            <div className="mt-4 space-y-3 max-h-[60vh] overflow-auto">
-              {(rows.find((x) => x.lessonId === open)?.reasons || []).map((x, idx) => (
-                <div key={idx} className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-sm font-extrabold text-slate-900">{x.reason}</p>
-                  <p className="text-xs font-semibold text-slate-600 mt-1">
-                    Reporter: {x.reporterEmail || x.reporterUid || "Unknown"} •{" "}
-                    {x.createdAt ? new Date(x.createdAt).toLocaleString() : ""}
-                  </p>
-                </div>
-              ))}
-            </div>
+        <textarea
+          required
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={6}
+          placeholder="Full Description / Story / Insight"
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => onIgnore(open)}
-                className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-extrabold text-slate-700"
-                type="button"
-              >
-                Ignore (clear reports)
-              </button>
-              <button
-                onClick={() => onDeleteLesson(open)}
-                className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-extrabold text-white"
-                type="button"
-              >
-                Delete lesson
-              </button>
-            </div>
+        <input
+          value={photoUrl}
+          onChange={(e) => setPhotoUrl(e.target.value)}
+          placeholder="Image URL (optional) e.g. https://..."
+          className="w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+        />
+
+        {photoUrl && (
+          <div className="overflow-hidden rounded-2xl border bg-slate-50">
+            <img
+              src={photoUrl}
+              alt="Preview"
+              className="h-44 w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+                toast.error("Invalid image URL");
+              }}
+            />
+          </div>
+        )}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option>Personal Growth</option>
+              <option>Career</option>
+              <option>Relationships</option>
+              <option>Mindset</option>
+              <option>Mistakes Learned</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Emotional Tone</label>
+            <select
+              value={tone}
+              onChange={(e) => setTone(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option>Motivational</option>
+              <option>Sad</option>
+              <option>Realization</option>
+              <option>Gratitude</option>
+            </select>
           </div>
         </div>
-      )}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Privacy</label>
+            <select
+              value={visibility}
+              onChange={(e) => setVisibility(e.target.value)}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold"
+            >
+              <option value="public">Public</option>
+              <option value="private">Private</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-extrabold text-slate-600">Access Level</label>
+            <select
+              value={accessLevel}
+              onChange={(e) => setAccessLevel(e.target.value)}
+              disabled={!isPremium}
+              title={!isPremium ? "Upgrade to Premium to create paid lessons" : ""}
+              className="mt-1 w-full rounded-xl border px-4 py-2 text-sm font-semibold disabled:bg-slate-100"
+            >
+              <option value="free">Free</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+        </div>
+
+        {!isPremium && (
+          <p className="text-xs font-semibold text-amber-700">
+            “Premium” is disabled for Free users. Upgrade to Premium to create paid lessons.
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-xl bg-slate-900 px-6 py-2 text-sm font-extrabold text-white disabled:opacity-60"
+        >
+          {saving ? "Saving..." : "Save Lesson"}
+        </button>
+      </form>
     </div>
   );
 }

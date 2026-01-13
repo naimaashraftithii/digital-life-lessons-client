@@ -1,15 +1,13 @@
 @import "tailwindcss";
 @plugin "daisyui";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+/* Tailwind v4 preflight is included automatically by @import "tailwindcss" */
 
 body {
   min-height: 100vh;
   color: #0f172a;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
 
-  /* gradient background */
   background: linear-gradient(
     90deg,
     #f6f2ff 0%,
@@ -17,6 +15,5 @@ body {
     #f1f9ff 60%,
     #eef6f3 100%
   );
-
   background-attachment: fixed;
 }

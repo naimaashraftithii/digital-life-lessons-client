@@ -12,16 +12,18 @@ export default function AdminProfile() {
   const [name, setName] = useState(user?.displayName || "");
   const [photo, setPhoto] = useState(user?.photoURL || "");
 
-  const email = useMemo(() => user?.email || plan?.user?.email || "", [user, plan]);
+  const email = useMemo(
+    () => user?.email || plan?.user?.email || "",
+    [user, plan]
+  );
 
   if (loading) return <LottieLoader />;
 
   const onSave = async () => {
-    // Firebase profile update
     Swal.fire({
       icon: "info",
       title: "Profile update",
-      text: "If you want, update Firebase profile here (optional). For assignment, showing UI is enough.",
+      text: "Optional: update Firebase profile. For assignment, UI is enough.",
       confirmButtonText: "Ok",
     });
     toast.success("Admin profile screen ready ✅");
@@ -82,15 +84,6 @@ export default function AdminProfile() {
           >
             Save Changes
           </button>
-
-          {/*  Activity Summary */}
-          <div className="mt-6 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
-            <p className="text-sm font-extrabold text-slate-900">Activity summary (optional)</p>
-            <ul className="mt-2 list-disc pl-5 text-sm font-semibold text-slate-700">
-              <li>Lessons moderated: (later)</li>
-              <li>Actions taken: (later)</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>

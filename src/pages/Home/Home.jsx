@@ -1,35 +1,31 @@
-import { Link } from "react-router-dom";
-import LottieLoader from "../../components/LottieLoader";
 import HeroSlider from "./sections/HeroSlider";
+import FeaturedLessonsCarousel from "./sections/FeaturedLessonsCarousel";
+import PricingTeaser from "./sections/PricingTeaser";
 import FeaturedLessons from "./sections/FeaturedLessons";
 import WhyLifeMatters from "./sections/WhyLifeMatters";
 import TopContributors from "./sections/TopContributors";
-import MostSavedLessons from "./sections/MostSavedLessons";
-import FeaturedLessonsCarousel from "./sections/FeaturedLessonsCarousel";
-import PricingTeaser from "./sections/PricingTeaser";
 import HotTopicsGrid from "./sections/HotTopicsGrid";
-const Home = () => {
+import MostSavedLessons from "./sections/MostSavedLessons";
+
+export default function Home() {
   return (
     <div className="bg-slate-50 w-full">
-      
       <HeroSlider />
-      {/* Featured slider */}
+
+      {/* (optional) static slider */}
       <FeaturedLessonsCarousel />
 
-      {/* Pricing teaser cards */}
       <PricingTeaser />
+
+      {/* ✅ dynamic sections, shown only once */}
       <FeaturedLessons />
       <WhyLifeMatters />
-      
-      
+
       <div className="bg-white/30">
         <TopContributors />
         <HotTopicsGrid />
         <MostSavedLessons />
       </div>
-      
     </div>
   );
-};
-
-export default Home;
+}
