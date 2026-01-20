@@ -135,8 +135,9 @@ const Navbar = () => {
                 onClick={() => setDropOpen((v) => !v)}
                 className="flex items-center gap-2 rounded-2xl bg-white/60 px-2 py-1 shadow-sm hover:bg-white/70"
               >
-                <img
-                  src={user.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
+            
+                <img            
+                  src={user?.providerData[0]?.photoURL || user?.photoURL}
                   alt="User"
                   className="h-9 w-9 rounded-2xl object-cover"
                 />
