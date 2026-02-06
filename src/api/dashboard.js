@@ -1,7 +1,9 @@
 // src/api/dashboard.js
-import { apiFetch } from "./client";
+import http from "./http";
 
-export function getDashboardSummary(uid) {
-  if (!uid) return Promise.resolve(null);
-  return apiFetch(`/dashboard/summary?uid=${encodeURIComponent(uid)}`);
-}
+// GET /dashboard/summary?uid=xxx
+export const getDashboardSummary = async (uid) => {
+  if (!uid) return null;
+  const { data } = await http.get("/dashboard/summary", { params: { uid } });
+  return data;
+};

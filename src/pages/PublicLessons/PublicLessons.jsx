@@ -46,8 +46,13 @@ export default function PublicLessons() {
     return () => {
       ignore = true;
     };
+    
+
   }, [page]);
 
+ 
+  
+  
   if (loading || planLoading) return <LottieLoader />;
 
   return (
@@ -99,6 +104,9 @@ export default function PublicLessons() {
                 key={lesson?._id}
                 className="relative overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
               >
+               {
+                 console.log(lesson)
+               }
                 {isLocked && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur">
                     <span className="text-2xl">🔒</span>

@@ -1,81 +1,132 @@
-// src/layouts/DashboardLayout.jsx
 import { NavLink, Outlet } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import useUserPlan from "../hooks/useUserPlan";
 import LottieLoader from "../components/LottieLoader";
 
-const NavItem = ({ to, label }) => (
-  <NavLink
-    to={to}
-    end
-    className={({ isActive }) =>
-      `block rounded-xl px-4 py-2 text-sm font-extrabold transition ${
-        isActive ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
-      }`
-    }
-  >
-    {label}
-  </NavLink>
-);
+const linkBase =
+  "rounded-xl px-3 py-2 text-sm font-extrabold transition hover:bg-slate-100";
+
+const linkActive = "bg-slate-900 text-white hover:bg-slate-900";
 
 export default function DashboardLayout() {
-  const { user, loading: authLoading } = useAuth();
-  const { plan, loading: planLoading } = useUserPlan(user?.uid);
+  const { user } = useAuth();
+  const { plan, loading } = useUserPlan(user?.uid);
 
-  if (authLoading || planLoading) return <LottieLoader />;
+  if (loading) return <LottieLoader />;
 
-  const isAdmin = plan?.role === "admin";
+  const isAdmin = (plan?.role || "user") === "admin";
+  const avatar =
+    plan?.user?.photoURL || user?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png";
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-7xl px-4 py-6 grid gap-6 lg:grid-cols-[260px_1fr]">
-        {/* Sidebar */}
-        <aside className="rounded-2xl bg-white border shadow-sm p-4 h-fit sticky top-6">
-          <div className="flex items-center gap-3 p-2">
-            <img
-              src={user?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
-              className="h-12 w-12 rounded-2xl object-cover"
-              alt="avatar"
-            />
-            <div>
-              <p className="text-sm font-extrabold text-slate-900 line-clamp-1">
-                {user?.displayName || "User"}
-              </p>
-              <p className="text-xs font-semibold text-slate-600 line-clamp-1">
-                {user?.email}
-              </p>
+    <div className="min-h-[calc(100vh-70px)] bg-slate-50">
+      <div className="mx-auto max-w-7xl px-4 py-6">
+        <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+          {/* Sidebar */}
+          <aside className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-100">
+            <div className="flex items-center gap-3">
+              <img
+                src={avatar}
+                onError={(e) => (e.currentTarget.src = "https://i.ibb.co/ZxK3f6K/user.png")}
+                alt="avatar"
+                className="h-12 w-12 rounded-2xl object-cover"
+              />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-extrabold text-slate-900">
+                  {plan?.user?.name || user?.displayName || "User"}
+                </p>
+                <p className="truncate text-xs font-semibold text-slate-500">
+                  {plan?.user?.email || user?.email}
+                </p>
+              </div>
             </div>
-          </div>
 
-          <div className="mt-4 space-y-1">
-            <p className="px-2 text-[11px] font-extrabold text-slate-500 tracking-widest">
-              USER
-            </p>
-            <NavItem to="/dashboard" label="Dashboard Home" />
-            <NavItem to="/dashboard/add-lesson" label="Add Lesson" />
-            <NavItem to="/dashboard/my-lessons" label="My Lessons" />
-            <NavItem to="/dashboard/my-favorites" label="My Favorites" />
-            <NavItem to="/dashboard/profile" label="Profile" />
-          </div>
+            <div className="mt-4 grid gap-2">
+              <NavLink
+                to="/dashboard"
+                end
+                className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+              >
+                Dashboard Home
+              </NavLink>
 
-          {isAdmin && (
-            <div className="mt-6 space-y-1">
-              <p className="px-2 text-[11px] font-extrabold text-slate-500 tracking-widest">
-                ADMIN
-              </p>
-              <NavItem to="/dashboard/admin" label="Admin Home" />
-              <NavItem to="/dashboard/admin/manage-users" label="Manage Users" />
-              <NavItem to="/dashboard/admin/manage-lessons" label="Manage Lessons" />
-              <NavItem to="/dashboard/admin/reported-lessons" label="Reported Lessons" />
-              <NavItem to="/dashboard/admin/profile" label="Admin Profile" />
+              <NavLink
+                to="/dashboard/add-lesson"
+                className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+              >
+                Add Lesson
+              </NavLink>
+
+              <NavLink
+                to="/dashboard/my-lessons"
+                className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+              >
+                My Lessons
+              </NavLink>
+
+              <NavLink
+                to="/dashboard/my-favorites"
+                className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+              >
+                My Favorites
+              </NavLink>
+
+              <NavLink
+                to="/dashboard/profile"
+                className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+              >
+                Profile
+              </NavLink>
+
+              {isAdmin && (
+                <div className="mt-2 rounded-2xl bg-slate-50 p-3">
+                  <p className="text-xs font-extrabold text-slate-500 mb-2">ADMIN</p>
+
+                  <NavLink
+                    to="/dashboard/admin"
+                    end
+                    className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+                  >
+                    Admin Home
+                  </NavLink>
+
+                  <NavLink
+                    to="/dashboard/admin/manage-users"
+                    className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+                  >
+                    Manage Users
+                  </NavLink>
+
+                  <NavLink
+                    to="/dashboard/admin/manage-lessons"
+                    className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+                  >
+                    Manage Lessons
+                  </NavLink>
+
+                  <NavLink
+                    to="/dashboard/admin/reported-lessons"
+                    className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+                  >
+                    Reported Lessons
+                  </NavLink>
+
+                  <NavLink
+                    to="/dashboard/admin/profile"
+                    className={({ isActive }) => `${linkBase} ${isActive ? linkActive : "text-slate-800"}`}
+                  >
+                    Admin Profile
+                  </NavLink>
+                </div>
+              )}
             </div>
-          )}
-        </aside>
+          </aside>
 
-        {/* Content */}
-        <main className="rounded-2xl bg-white border shadow-sm overflow-hidden">
-          <Outlet />
-        </main>
+          {/* Main */}
+          <main className="min-w-0">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );

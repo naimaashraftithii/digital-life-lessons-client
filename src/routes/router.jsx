@@ -1,5 +1,6 @@
 // src/routes/router.jsx
 import { createBrowserRouter } from "react-router-dom";
+
 import MainLayout from "../layouts/MainLayout";
 import AuthLayout from "../layouts/AuthLayout";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -33,20 +34,23 @@ import PaymentSuccess from "../pages/Payment/PaymentSuccess";
 import PaymentCancel from "../pages/Payment/PaymentCancel";
 
 const router = createBrowserRouter([
+  // ✅ MAIN (Public)
   {
     path: "/",
     element: <MainLayout />,
     children: [
       { index: true, element: <Home /> },
+
       { path: "public-lessons", element: <PublicLessons /> },
 
-      // ✅ details should be public (premium locked inside component)
+      // ✅ public details route (premium lock handled inside component)
       { path: "lesson/:id", element: <LessonDetails /> },
 
       { path: "pricing", element: <Pricing /> },
       { path: "payment-success", element: <PaymentSuccess /> },
       { path: "payment-cancel", element: <PaymentCancel /> },
 
+      // ✅ USER + ADMIN DASHBOARD (Private)
       {
         path: "dashboard",
         element: (
@@ -61,6 +65,7 @@ const router = createBrowserRouter([
           { path: "my-favorites", element: <MyFavorites /> },
           { path: "profile", element: <Profile /> },
 
+          // ✅ ADMIN (nested under /dashboard/admin)
           {
             path: "admin",
             element: (
@@ -79,11 +84,12 @@ const router = createBrowserRouter([
         ],
       },
 
-      // ✅ always catch 404
+      // ✅ 404 inside MainLayout
       { path: "*", element: <NotFound /> },
     ],
   },
 
+  // ✅ AUTH (Login/Register) - separate layout
   {
     path: "/",
     element: <AuthLayout />,

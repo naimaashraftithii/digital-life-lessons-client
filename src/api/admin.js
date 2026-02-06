@@ -1,6 +1,12 @@
 // src/api/admin.js
 import http from "./http";
 
+/* -------------------- ADMIN SUMMARY -------------------- */
+export const getAdminSummary = async () => {
+  const { data } = await http.get("/admin/summary");
+  return data;
+};
+
 /* -------------------- USERS -------------------- */
 export const adminGetUsers = async () => {
   const { data } = await http.get("/admin/users");
@@ -20,7 +26,7 @@ export const adminDeleteUser = async (uid) => {
 /* -------------------- LESSONS -------------------- */
 export const adminGetLessons = async (params = {}) => {
   const { data } = await http.get("/admin/lessons", { params });
-  return data;
+  return Array.isArray(data) ? data : [];
 };
 
 export const adminToggleFeatured = async (id, value) => {
@@ -38,13 +44,10 @@ export const adminDeleteLesson = async (id) => {
   return data;
 };
 
-// ✅ Your ReportedLessons imports this name
-export const deleteLessonAdmin = adminDeleteLesson;
-
 /* -------------------- REPORTED LESSONS -------------------- */
 export const getReportedLessons = async () => {
   const { data } = await http.get("/admin/reported-lessons");
-  return data;
+  return Array.isArray(data) ? data : [];
 };
 
 export const ignoreReports = async (lessonId) => {

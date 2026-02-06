@@ -1,22 +1,30 @@
 // src/api/http.js
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_URL;
+const RAW = import.meta.env.VITE_API_URL || "";
+const BASE_URL = RAW.replace(/\/+$/, ""); // remove trailing slash
 
 const http = axios.create({
-  baseURL: API,              // e.g. http://localhost:3000
-  withCredentials: true,
+  baseURL: BASE_URL, // <-- THIS fixes mixed localhost vs render
+  timeout: 20000,
+  headers: { "Content-Type": "application/json" },
 });
 
-// optional: nice error message
+// Optional: better error object
 http.interceptors.response.use(
   (res) => res,
   (err) => {
-    const msg =
-      err?.response?.data?.message ||
+    const status = err?.response?.status;
+    const data = err?.response?.data;
+    const message =
+      data?.message ||
       err?.message ||
-      "Request failed";
-    return Promise.reject(new Error(msg));
+      `Request failed${status ? ` (${status})` : ""}`;
+
+    const e = new Error(message);
+    e.status = status;
+    e.data = data;
+    throw e;
   }
 );
 

@@ -1,8 +1,8 @@
 // src/api/users.js
-import { apiFetch } from "./client";
+import http from "./http";
 
 export async function upsertUser(firebaseUser) {
-  if (!firebaseUser?.uid || !firebaseUser?.email) return;
+  if (!firebaseUser?.uid || !firebaseUser?.email) return null;
 
   const payload = {
     uid: firebaseUser.uid,
@@ -11,8 +11,6 @@ export async function upsertUser(firebaseUser) {
     photoURL: firebaseUser.photoURL || "",
   };
 
-  return apiFetch("/users/upsert", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  const res = await http.post("/users/upsert", payload);
+  return res.data;
 }

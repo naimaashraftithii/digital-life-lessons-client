@@ -153,36 +153,26 @@ export default function DashboardHome() {
           Lessons created per day (last 7 days)
         </p>
 
-        <div className="mt-4 h-[260px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={weeklySeries} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-              {/* ✅ grid */}
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-              <Tooltip
-                cursor={{ fill: "rgba(0,0,0,0.04)" }}
-                contentStyle={{ borderRadius: 12 }}
-              />
+       <div className="mt-4 h-[260px] w-full min-w-0">
+  <ResponsiveContainer width="100%" height="100%" minWidth={300} minHeight={260}>
+    <BarChart data={weeklySeries} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis dataKey="day" tick={{ fontSize: 12 }} />
+      <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+      <Tooltip cursor={{ fill: "rgba(0,0,0,0.04)" }} contentStyle={{ borderRadius: 12 }} />
 
-              {/* ✅ gradient color */}
-              <defs>
-                <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366F1" />
-                  <stop offset="50%" stopColor="#EC4899" />
-                  <stop offset="100%" stopColor="#22C55E" />
-                </linearGradient>
-              </defs>
+      <defs>
+        <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6366F1" />
+          <stop offset="50%" stopColor="#EC4899" />
+          <stop offset="100%" stopColor="#22C55E" />
+        </linearGradient>
+      </defs>
 
-              <Bar
-                dataKey="lessons"
-                fill="url(#barGrad)"
-                radius={[10, 10, 10, 10]}
-                maxBarSize={46}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      <Bar dataKey="lessons" fill="url(#barGrad)" radius={[10, 10, 10, 10]} maxBarSize={46} />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
 
         {/* If everything 0 show message */}
         {weeklySeries.every((x) => x.lessons === 0) && (

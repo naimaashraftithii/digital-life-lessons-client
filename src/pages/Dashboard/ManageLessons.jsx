@@ -1,3 +1,4 @@
+// src/pages/Dashboard/ManageLessons.jsx
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
@@ -24,7 +25,8 @@ export default function ManageLessons() {
       const data = await adminGetLessons({ search, visibility, accessLevel, featured });
       setLessons(Array.isArray(data) ? data : []);
     } catch (e) {
-      toast.error(e.message);
+      toast.error(e?.message || "Failed to load lessons");
+      setLessons([]);
     } finally {
       setLoading(false);
     }
@@ -32,7 +34,7 @@ export default function ManageLessons() {
 
   useEffect(() => {
     load();
- 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredCount = useMemo(() => lessons.length, [lessons]);
@@ -43,7 +45,7 @@ export default function ManageLessons() {
       toast.success(!current ? "Marked as Featured ✅" : "Removed Featured ✅");
       await load();
     } catch (e) {
-      toast.error(e.message);
+      toast.error(e?.message || "Failed");
     }
   };
 
@@ -53,7 +55,7 @@ export default function ManageLessons() {
       toast.success(!current ? "Marked Reviewed ✅" : "Unreviewed ✅");
       await load();
     } catch (e) {
-      toast.error(e.message);
+      toast.error(e?.message || "Failed");
     }
   };
 
@@ -73,7 +75,7 @@ export default function ManageLessons() {
       toast.success("Lesson deleted ✅");
       await load();
     } catch (e) {
-      toast.error(e.message);
+      toast.error(e?.message || "Failed to delete");
     }
   };
 
@@ -85,7 +87,7 @@ export default function ManageLessons() {
         <div>
           <h2 className="text-lg font-extrabold text-slate-900">Manage Lessons</h2>
           <p className="mt-1 text-sm font-semibold text-slate-600">
-            Feature lessons for home page, mark reviewed, and delete inappropriate content.
+            Feature lessons, mark reviewed, and delete inappropriate content.
           </p>
           <p className="mt-1 text-xs font-extrabold text-slate-500">
             Showing: {filteredCount}
@@ -167,10 +169,18 @@ export default function ManageLessons() {
                     </p>
                   </td>
 
+                  {/* ✅ FIXED CREATOR CELL */}
                   <td className="py-3 pr-3">
                     <div className="flex items-center gap-2">
                       <img
-                        src={l?.creator?.photo || "https://i.ibb.co/ZxK3f6K/user.png"}
+                        src={
+                          l?.creator?.photoURL ||
+                          l?.creator?.photoUrl ||
+                          "https://i.ibb.co/ZxK3f6K/user.png"
+                        }
+                        onError={(e) =>
+                          (e.currentTarget.src = "https://i.ibb.co/ZxK3f6K/user.png")
+                        }
                         alt="creator"
                         className="h-9 w-9 rounded-2xl object-cover"
                       />
@@ -187,7 +197,7 @@ export default function ManageLessons() {
 
                   <td className="py-3 pr-3">
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-700">
-                      {l.visibility || "public"}
+                      {(l.visibility || "public").toUpperCase()}
                     </span>
                   </td>
 
@@ -200,7 +210,7 @@ export default function ManageLessons() {
                           : "bg-indigo-100 text-indigo-700",
                       ].join(" ")}
                     >
-                      {l.accessLevel || "free"}
+                      {(l.accessLevel || "free").toUpperCase()}
                     </span>
                   </td>
 
