@@ -1,61 +1,56 @@
-// src/hooks/useUserPlan.js
-import { useEffect, useState } from "react";
+//useuseresplan
+import { useCallback, useEffect, useState } from "react";
 import { getUserPlan } from "../api/usersPlan";
-
 
 const FREE = { isPremium: false, role: "user", user: null };
 
 export default function useUserPlan(uid) {
   const [plan, setPlan] = useState(FREE);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!uid) {
-      setPlan(FREE);
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getUserPlan(uid);
+      setPlan(data || FREE);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await getUserPlan(uid);
-        if (!cancelled) setPlan(data ?? FREE);
-      } catch {
-        if (!cancelled) setPlan(FREE);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [uid]);
 
-  return { plan, loading };
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  return { plan, loading, refetch };
 }
 
+
+
+// import { useCallback, useEffect, useState } from "react";
+// import { getUserPlan } from "../api/usersPlan";
+
 // export default function useUserPlan(uid) {
-//   const [plan, setPlan] = useState({ isPremium: false, role: "user", user: null });
-//   const [loading, setLoading] = useState(false);
+//   const [plan, setPlan] = useState(null);
+//   const [loading, setLoading] = useState(true);
+//   const [tick, setTick] = useState(0);
+
+//   const refetch = useCallback(() => setTick((x) => x + 1), []);
 
 //   useEffect(() => {
 //     let ignore = false;
 
-//     if (!uid) {
-//       setPlan({ isPremium: false, role: "user", user: null });
-//       setLoading(false);
-//       return;
-//     }
-
 //     (async () => {
 //       try {
 //         setLoading(true);
+
+//         if (!uid) {
+//           if (!ignore) setPlan({ isPremium: false, role: "user", user: null });
+//           return;
+//         }
+
 //         const data = await getUserPlan(uid);
-//         if (!ignore) setPlan(data ?? { isPremium: false, role: "user", user: null });
+//         if (!ignore) setPlan(data);
 //       } catch {
 //         if (!ignore) setPlan({ isPremium: false, role: "user", user: null });
 //       } finally {
@@ -66,7 +61,7 @@ export default function useUserPlan(uid) {
 //     return () => {
 //       ignore = true;
 //     };
-//   }, [uid]);
+//   }, [uid, tick]);
 
-//   return { plan, loading };
+//   return { plan, loading, refetch };
 // }

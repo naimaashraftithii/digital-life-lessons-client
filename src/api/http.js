@@ -2,15 +2,15 @@
 import axios from "axios";
 
 const RAW = import.meta.env.VITE_API_URL || "";
-const BASE_URL = RAW.replace(/\/+$/, ""); // remove trailing slash
+const BASE_URL = RAW.replace(/\/+$/, ""); 
 
 const http = axios.create({
-  baseURL: BASE_URL, // <-- THIS fixes mixed localhost vs render
+  baseURL: BASE_URL, 
   timeout: 20000,
   headers: { "Content-Type": "application/json" },
 });
 
-// Optional: better error object
+
 http.interceptors.response.use(
   (res) => res,
   (err) => {

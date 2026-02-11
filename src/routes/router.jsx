@@ -1,4 +1,3 @@
-// src/routes/router.jsx
 import { createBrowserRouter } from "react-router-dom";
 
 import MainLayout from "../layouts/MainLayout";
@@ -34,23 +33,20 @@ import PaymentSuccess from "../pages/Payment/PaymentSuccess";
 import PaymentCancel from "../pages/Payment/PaymentCancel";
 
 const router = createBrowserRouter([
-  // ✅ MAIN (Public)
+  // PUBLIC + DASHBOARD (same main layout)
   {
     path: "/",
     element: <MainLayout />,
     children: [
       { index: true, element: <Home /> },
-
       { path: "public-lessons", element: <PublicLessons /> },
-
-      // ✅ public details route (premium lock handled inside component)
       { path: "lesson/:id", element: <LessonDetails /> },
 
-      { path: "pricing", element: <Pricing /> },
-      { path: "payment-success", element: <PaymentSuccess /> },
-      { path: "payment-cancel", element: <PaymentCancel /> },
+      { path: "pricing", element: <PrivateRoute><Pricing /></PrivateRoute> },
+      { path: "payment-success", element: <PrivateRoute><PaymentSuccess /></PrivateRoute> },
+      { path: "payment-cancel", element: <PrivateRoute><PaymentCancel /></PrivateRoute> },
 
-      // ✅ USER + ADMIN DASHBOARD (Private)
+      // DASHBOARD (private)
       {
         path: "dashboard",
         element: (
@@ -65,7 +61,7 @@ const router = createBrowserRouter([
           { path: "my-favorites", element: <MyFavorites /> },
           { path: "profile", element: <Profile /> },
 
-          // ✅ ADMIN (nested under /dashboard/admin)
+          // ADMIN (nested)
           {
             path: "admin",
             element: (
@@ -75,29 +71,28 @@ const router = createBrowserRouter([
             ),
             children: [
               { index: true, element: <AdminHome /> },
-              { path: "profile", element: <AdminProfile /> },
               { path: "manage-users", element: <ManageUsers /> },
               { path: "manage-lessons", element: <ManageLessons /> },
               { path: "reported-lessons", element: <ReportedLessons /> },
-            ],
-          },
-        ],
+              { path: "profile", element: <AdminProfile /> }
+            ]
+          }
+        ]
       },
 
-      // ✅ 404 inside MainLayout
-      { path: "*", element: <NotFound /> },
-    ],
+      { path: "*", element: <NotFound /> }
+    ]
   },
 
-  // ✅ AUTH (Login/Register) - separate layout
+  // AUTH (separate layout)
   {
     path: "/",
     element: <AuthLayout />,
     children: [
       { path: "login", element: <Login /> },
-      { path: "register", element: <Register /> },
-    ],
-  },
+      { path: "register", element: <Register /> }
+    ]
+  }
 ]);
 
 export default router;

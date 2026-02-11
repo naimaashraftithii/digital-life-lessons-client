@@ -12,7 +12,7 @@ export const getMostSavedLessons = async () => {
   return Array.isArray(data) ? data : [];
 };
 
-// ✅ days=7 or days=0 (all-time)
+//  days=7 
 export const getTopContributors = async (days = 7) => {
   const { data } = await http.get("/home/top-contributors", {
     params: { days },

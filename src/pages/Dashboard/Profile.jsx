@@ -64,10 +64,7 @@ const LessonCard = ({ lesson }) => {
             </div>
           </div>
 
-          <Link
-            to={`/lesson/${lesson?._id}`}
-            className="text-sm font-extrabold text-primary hover:underline"
-          >
+          <Link to={`/lesson/${lesson?._id}`} className="text-sm font-extrabold text-primary hover:underline">
             See details →
           </Link>
         </div>
@@ -82,13 +79,17 @@ export default function Profile() {
 
   const { data, loading, error } = useDashboardSummary(user?.uid);
 
+  // ✅ premium from Mongo user
   const isPremium = !!data?.user?.isPremium;
 
-  const counts = useMemo(() => ({
-    lessonsCreated: data?.counts?.publicLessons ?? 0,
-    totalLikes: data?.counts?.likes ?? 0,
-    totalSaved: data?.counts?.favorites ?? 0,
-  }), [data]);
+  const counts = useMemo(
+    () => ({
+      lessonsCreated: data?.counts?.publicLessons ?? 0,
+      totalLikes: data?.counts?.likes ?? 0,
+      totalSaved: data?.counts?.favorites ?? 0,
+    }),
+    [data]
+  );
 
   // Edit form
   const [editing, setEditing] = useState(false);
@@ -106,7 +107,6 @@ export default function Profile() {
     setPhoto(user?.photoURL || "");
   }, [user?.displayName, user?.photoURL]);
 
-  // ✅ SINGLE useEffect (no nesting)
   useEffect(() => {
     if (!user?.uid) {
       setMyPublicLessons([]);
@@ -142,7 +142,9 @@ export default function Profile() {
       }
     })();
 
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [user?.uid]);
 
   const handleSave = async (e) => {
@@ -180,11 +182,19 @@ export default function Profile() {
 
           <div className="relative grid gap-6 p-6 md:grid-cols-[220px_1fr] md:items-center">
             <div className="flex justify-center md:justify-start">
-              <img
-                src={user?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
-                alt="Profile"
-                className="h-36 w-36 rounded-[28px] object-cover shadow-md md:h-44 md:w-44"
-              />
+              {/* ✅ Crown goes HERE */}
+              <div className="relative inline-block">
+                <img
+                  src={user?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
+                  alt="Profile"
+                  className="h-36 w-36 rounded-[28px] object-cover shadow-md md:h-44 md:w-44"
+                />
+                {isPremium && (
+                  <div className="absolute -top-3 -right-3 rounded-2xl bg-amber-100 px-2 py-1 text-xs font-extrabold text-amber-800 shadow">
+                    👑
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -224,7 +234,10 @@ export default function Profile() {
                 </div>
 
                 {editing && (
-                  <form onSubmit={handleSave} className="mt-5 grid gap-3 rounded-2xl bg-white p-4 shadow-sm">
+                  <form
+                    onSubmit={handleSave}
+                    className="mt-5 grid gap-3 rounded-2xl bg-white p-4 shadow-sm"
+                  >
                     <div className="grid gap-2 md:grid-cols-2">
                       <label className="text-xs font-extrabold text-slate-600">
                         Display name
@@ -248,7 +261,11 @@ export default function Profile() {
                     </div>
 
                     <div className="flex gap-3">
-                      <GradientButton variant="greenBlue" disabled={saving} className="disabled:opacity-60">
+                      <GradientButton
+                        variant="greenBlue"
+                        disabled={saving}
+                        className="disabled:opacity-60"
+                      >
                         {saving ? "Saving..." : "Save changes"}
                       </GradientButton>
 
@@ -276,15 +293,21 @@ export default function Profile() {
               <div className="grid grid-cols-3 gap-3">
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Lessons</p>
-                  <p className="mt-1 text-2xl font-extrabold text-slate-900">{counts.lessonsCreated}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                    {counts.lessonsCreated}
+                  </p>
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Saved</p>
-                  <p className="mt-1 text-2xl font-extrabold text-slate-900">{counts.totalSaved}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                    {counts.totalSaved}
+                  </p>
                 </div>
                 <div className="rounded-2xl bg-white/70 p-4 text-center shadow-sm backdrop-blur transition hover:shadow-lg">
                   <p className="text-xs font-extrabold text-slate-500">Likes</p>
-                  <p className="mt-1 text-2xl font-extrabold text-slate-900">{counts.totalLikes}</p>
+                  <p className="mt-1 text-2xl font-extrabold text-slate-900">
+                    {counts.totalLikes}
+                  </p>
                 </div>
               </div>
             </div>
@@ -296,13 +319,20 @@ export default function Profile() {
           <StatCard
             label="TOTAL PUBLIC LESSONS"
             value={counts.lessonsCreated}
-            pill={<span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-extrabold text-indigo-700">Newest first</span>}
+            pill={
+              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-extrabold text-indigo-700">
+                Newest first
+              </span>
+            }
           />
           <StatCard
             label="TOTAL SAVED (FAVORITES)"
             value={counts.totalSaved}
             pill={
-              <Link to="/dashboard/my-favorites" className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white">
+              <Link
+                to="/dashboard/my-favorites"
+                className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white"
+              >
                 View
               </Link>
             }
@@ -312,7 +342,9 @@ export default function Profile() {
             value={isPremium ? "YES" : "NO"}
             pill={
               isPremium ? (
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">Premium ⭐</span>
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-extrabold text-amber-800">
+                  Premium ⭐
+                </span>
               ) : (
                 <button
                   onClick={() => navigate("/pricing")}
@@ -330,7 +362,9 @@ export default function Profile() {
           <div className="rounded-[32px] bg-white/50 p-6 shadow-sm backdrop-blur">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-extrabold text-slate-900">Your public lessons</h2>
+                <h2 className="text-2xl font-extrabold text-slate-900">
+                  Your public lessons
+                </h2>
                 <p className="mt-1 text-sm font-semibold text-slate-600">
                   Loaded from MongoDB (newest first).
                 </p>
@@ -342,14 +376,18 @@ export default function Profile() {
             </div>
 
             {lessonsLoading ? (
-              <div className="mt-6"><LottieLoader /></div>
+              <div className="mt-6">
+                <LottieLoader />
+              </div>
             ) : lessonsErr ? (
               <div className="mt-6 rounded-3xl bg-red-50 p-6 text-sm font-semibold text-red-700">
                 {lessonsErr}
               </div>
             ) : myPublicLessons.length === 0 ? (
               <div className="mt-6 rounded-3xl bg-white p-6 text-center shadow-sm">
-                <p className="text-lg font-extrabold text-slate-900">No public lessons yet</p>
+                <p className="text-lg font-extrabold text-slate-900">
+                  No public lessons yet
+                </p>
                 <p className="mt-1 text-sm font-semibold text-slate-600">
                   Create your first public lesson and share your wisdom.
                 </p>
@@ -372,4 +410,3 @@ export default function Profile() {
     </div>
   );
 }
-

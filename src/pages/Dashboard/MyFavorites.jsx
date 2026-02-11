@@ -119,7 +119,7 @@ export default function MyFavorites() {
           <div className="mt-6 rounded-2xl bg-slate-50 p-5 text-center">
             <p className="font-extrabold text-slate-900">No favorites yet</p>
             <p className="text-sm font-semibold text-slate-600 mt-1">
-              Save lessons from Public Lessons / Lesson Details.
+              Save lessons from Public Lessons & Lesson Details.
             </p>
           </div>
         )}

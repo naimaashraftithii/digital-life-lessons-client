@@ -2,7 +2,7 @@
 import http from "./http";
 
 /* -------------------- PUBLIC -------------------- */
-// server returns: { lessons, total, currentPage, totalPages }
+
 export const getPublicLessonsWithMeta = async (params = {}) => {
   const res = await http.get("/lessons/public", { params });
   const data = res.data;
