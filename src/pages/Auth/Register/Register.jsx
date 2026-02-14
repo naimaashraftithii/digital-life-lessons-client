@@ -24,19 +24,19 @@ const Register = () => {
     const password = form.password.value;
 
     if (!name || !email || !password) {
-      toast.error("Name, Email, Password অবশ্যই দিতে হবে");
+      toast.error("Name, Email, Password Must be give");
       return;
     }
     if (password.length < 6) {
-      toast.error("Password কমপক্ষে 6 অক্ষরের হতে হবে");
+      toast.error("Password ATLEAST 6 LETTER");
       return;
     }
     if (!hasUpper(password)) {
-      toast.error("Password এ অন্তত ১টি Uppercase letter থাকতে হবে");
+      toast.error("Password ATLEAST 1 UPPERCASE LETTER");
       return;
     }
     if (!hasLower(password)) {
-      toast.error("Password এ অন্তত ১টি Lowercase letter থাকতে হবে");
+      toast.error("Password ATLEAST 1  lOWERCASE LETTER");
       return;
     }
 

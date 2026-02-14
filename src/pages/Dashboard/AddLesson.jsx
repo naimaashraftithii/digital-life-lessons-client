@@ -55,7 +55,7 @@ export default function AddLesson() {
     try {
       setSaving(true);
       await createLesson(payload);
-      toast.success("Lesson added successfully ✅");
+      toast.success("Lesson added successfuLL ✔");
       navigate("/dashboard/my-lessons");
     } catch (err) {
       toast.error(err?.message || "Failed to create lesson");
@@ -180,7 +180,7 @@ export default function AddLesson() {
 
         {!isPremium && (
           <div className="rounded-xl bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">
-            “Premium” is disabled for Free users. Upgrade to Premium to create paid lessons.
+            “Premium” is disabled for Free users. Upgrade to Premium to create paid lessons 👑.....!!!
           </div>
         )}
 
