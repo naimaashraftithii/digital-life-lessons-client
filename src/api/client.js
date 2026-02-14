@@ -1,4 +1,4 @@
-// src/api/client.js
+
 export async function apiFetch(path, options = {}, config = {}) {
   const RAW = import.meta.env.VITE_API_URL || "";
   const API = RAW.replace(/\/+$/, "");

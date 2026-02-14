@@ -1,4 +1,4 @@
-// src/api/dashboard.js
+
 import http from "./http";
 
 // dashboard summary

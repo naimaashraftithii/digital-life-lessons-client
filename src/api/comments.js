@@ -1,4 +1,4 @@
-// src/api/comments.js
+
 import http from "./http";
 
 

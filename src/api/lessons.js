@@ -1,7 +1,7 @@
-// src/api/lessons.js
+
 import http from "./http";
 
-/* -------------------- PUBLIC -------------------- */
+/*  PUBLIC  */
 
 export const getPublicLessonsWithMeta = async (params = {}) => {
   const res = await http.get("/lessons/public", { params });
@@ -26,7 +26,7 @@ export const getPublicLessons = async (params = {}) => {
   return res.lessons || [];
 };
 
-/* -------------------- DETAILS -------------------- */
+/*  DETAILS */
 export const getLessonById = async (id) => {
   const res = await http.get(`/lessons/${id}`);
   return res.data || null;
@@ -47,14 +47,14 @@ export const getFavoritesCount = async (id) => {
   return res.data || { favoritesCount: 0 };
 };
 
-/* -------------------- MY LESSONS -------------------- */
+/* MY LESSONS  */
 export const getMyLessons = async (uid) => {
   if (!uid) return [];
   const res = await http.get("/lessons/my", { params: { uid } });
   return Array.isArray(res.data) ? res.data : [];
 };
 
-/* -------------------- CREATE / UPDATE / DELETE -------------------- */
+/* CREATE / UPDATE / DELETE  */
 export const createLesson = async (lesson) => {
   const res = await http.post("/lessons", lesson);
   return res.data;

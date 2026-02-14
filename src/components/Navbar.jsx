@@ -17,7 +17,7 @@ export default function Navbar() {
   const { user, logOut } = useAuth();
   const { plan, loading, refetch, error } = useUserPlan(user?.uid);
 
-  // ✅ safe for both shapes
+  //  safe for both shapes
   const isPremium = Boolean(plan?.isPremium ?? plan?.user?.isPremium);
   const role = plan?.role ?? plan?.user?.role ?? "user";
   const isAdmin = role === "admin";
@@ -26,10 +26,10 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // ✅ refetch on route change (after payment success, etc.)
+  // refetch on route change 
   useEffect(() => {
     if (user?.uid) refetch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [location.pathname, user?.uid]);
 
   // close dropdown on outside click
@@ -76,7 +76,7 @@ export default function Navbar() {
 
         {/* Right Side */}
         <div className="flex items-center gap-2">
-          {/* ✅ Free => Upgrade */}
+          {/* Free => Upgrade */}
           {user && !loading && !isPremium && (
             <button
               onClick={() => navigate("/pricing")}
@@ -87,7 +87,7 @@ export default function Navbar() {
             </button>
           )}
 
-          {/* ✅ Premium => Premium */}
+          {/* Premium => Premium */}
           {user && !loading && isPremium && (
             <button
               onClick={() => navigate("/dashboard/profile")}
@@ -175,7 +175,7 @@ export default function Navbar() {
             </div>
           )}
 
-          {/* Mobile menu button (now mobileOpen is USED ✅) */}
+          {/* Mobile menu button */}
           <button
             onClick={() => setMobileOpen((v) => !v)}
             className="inline-flex rounded-xl border bg-white px-3 py-2 text-xs font-extrabold text-slate-800 shadow-sm md:hidden"

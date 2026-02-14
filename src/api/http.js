@@ -1,4 +1,4 @@
-// src/api/http.js
+
 import axios from "axios";
 
 const RAW = import.meta.env.VITE_API_URL || "";

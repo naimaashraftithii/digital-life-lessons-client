@@ -1,13 +1,13 @@
-// src/api/admin.js
+
 import http from "./http";
 
-/* -------------------- admin summary-------------------- */
+/*admin summary*/
 export const getAdminSummary = async () => {
   const { data } = await http.get("/admin/summary");
   return data;
 };
 
-/* -------------------- User-------------------- */
+/* User */
 export const adminGetUsers = async () => {
   const { data } = await http.get("/admin/users");
   return data;
@@ -23,7 +23,7 @@ export const adminDeleteUser = async (uid) => {
   return data;
 };
 
-/* -------------------- Lesson -------------------- */
+/* Lesson */
 export const adminGetLessons = async (params = {}) => {
   const { data } = await http.get("/admin/lessons", { params });
   return Array.isArray(data) ? data : [];
@@ -44,7 +44,7 @@ export const adminDeleteLesson = async (id) => {
   return data;
 };
 
-/* -------------------- Reported lesson -------------------- */
+/*  Reported lesson  */
 export const getReportedLessons = async () => {
   const { data } = await http.get("/admin/reported-lessons");
   return Array.isArray(data) ? data : [];

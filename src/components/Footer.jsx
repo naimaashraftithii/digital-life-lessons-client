@@ -149,7 +149,7 @@ const Footer = () => {
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-5 text-center text-xs text-[#6b7280] md:flex-row md:justify-between">
           <p>© {year} Digital Life Lessons. All rights reserved.</p>
           <p className="transition-colors duration-300 hover:text-[#22c55e]">
-            Built for mindful reflection ✨
+            Built for mindful reflection 
           </p>
         </div>
       </div>

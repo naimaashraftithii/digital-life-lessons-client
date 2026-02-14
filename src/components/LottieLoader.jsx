@@ -16,7 +16,7 @@ const LottieLoader = () => {
         </h1>
 
         <p className="mt-1 text-xs sm:text-sm text-slate-600 animate-pulse">
-          Please wait a moment
+          Please wait a moment....!!!
         </p>
       </div>
     </div>

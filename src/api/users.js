@@ -1,4 +1,4 @@
-// src/api/users.js
+
 import http from "./http";
 
 export async function upsertUser(firebaseUser) {
