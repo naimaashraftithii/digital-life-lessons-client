@@ -1,11 +1,11 @@
-// src/hooks/useDashboardSummary.js
+
 import { useEffect, useState } from "react";
 import { getUserPlan } from "../api/usersPlan";
 import { getMyLessons } from "../api/lessons";
 import { getFavorites } from "../api/favorites";
 
 export default function useDashboardSummary(uid) {
-  const [data, setData] = useState(null);     // ✅ pages expect "data"
+  const [data, setData] = useState(null);     
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -42,7 +42,7 @@ export default function useDashboardSummary(uid) {
           (l) => l?.visibility === "public"
         ).length;
 
-        // ✅ week analytics
+        //  week analytics
         const days = Array.from({ length: 7 }).map((_, i) => {
           const d = new Date();
           d.setDate(d.getDate() - (6 - i));
@@ -93,5 +93,5 @@ export default function useDashboardSummary(uid) {
     };
   }, [uid]);
 
-  return { data, loading, error }; // ✅ now matches your pages
+  return { data, loading, error }; 
 }

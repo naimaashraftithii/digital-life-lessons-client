@@ -10,7 +10,7 @@ export default function useUserPlan(uid) {
   const abortRef = useRef(null);
 
   const refetch = useCallback(async () => {
-    // no uid => reset
+
     if (!uid) {
       abortRef.current?.abort?.();
       setPlan(null);
@@ -37,7 +37,7 @@ export default function useUserPlan(uid) {
         throw new Error(json?.message || `Failed to load plan (${res.status})`);
       }
 
-      // ✅ normalize so Navbar always works
+      // normalize so Navbar 
       const normalized = {
         ...json,
         user: json?.user || null,
