@@ -77,7 +77,7 @@ export default function LessonDetails() {
 
   useEffect(() => {
     loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line 
   }, [id]);
 
   if (loading || planLoading) return <LottieLoader />;
@@ -278,13 +278,16 @@ export default function LessonDetails() {
               ❤️ {lesson.likesCount || 0} Likes
             </span>
             <span className="rounded-2xl bg-white ring-1 ring-slate-200 px-4 py-2 text-sm font-extrabold text-slate-900">
-              🔖 {favCount} Favorites
+              
+               {favCount} Favorites
             </span>
             <span className="rounded-2xl bg-white ring-1 ring-slate-200 px-4 py-2 text-sm font-extrabold text-slate-900">
-              💬 {comments.length} Comments
+              💬
+            {comments.length} Comments
             </span>
             <span className="rounded-2xl bg-white ring-1 ring-slate-200 px-4 py-2 text-sm font-extrabold text-slate-900">
-              👁 {views} Views
+           👁‍🗨
+           {views} Views
             </span>
           </div>
 

@@ -51,7 +51,7 @@ const plans = [
 const PricingTeaser = () => {
   return (
     <section className="relative overflow-hidden py-12 sm:py-14">
-      {/* ✅ Background gradient + soft blobs */}
+      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-white via-slate-50 to-slate-100" />
       <div className="pointer-events-none absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-indigo-200/40 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-amber-200/40 blur-3xl" />
@@ -66,10 +66,10 @@ const PricingTeaser = () => {
           </p>
 
           <h2 className="mt-4 text-3xl font-extrabold text-slate-900 sm:text-4xl">
-            Choose your plan
+            Choose your plan ➡
           </h2>
           <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600 sm:text-base">
-            Start free anytime. Upgrade once for lifetime Premium access—unlock premium
+            Start free anytime. Upgrade once for lifetime Premium access ➖unlock premium ⭐
             lessons and premium creation.
           </p>
         </div>
@@ -149,7 +149,7 @@ const PricingTeaser = () => {
 
                 {/* small hint */}
                 <p className="mt-4 text-center text-xs text-slate-500">
-                  No hidden fees • Cancel anytime (if monthly later)
+                  No hidden fees • Cancel anytime
                 </p>
               </div>
             </div>

@@ -65,7 +65,7 @@ const LessonCard = ({ lesson }) => {
           </div>
 
           <Link to={`/lesson/${lesson?._id}`} className="text-sm font-extrabold text-primary hover:underline">
-            See details →
+            See details ➡
           </Link>
         </div>
       </div>
@@ -79,7 +79,7 @@ export default function Profile() {
 
   const { data, loading, error } = useDashboardSummary(user?.uid);
 
-  // ✅ premium from Mongo user
+  //  premium  user
   const isPremium = !!data?.user?.isPremium;
 
   const counts = useMemo(
@@ -182,7 +182,7 @@ export default function Profile() {
 
           <div className="relative grid gap-6 p-6 md:grid-cols-[220px_1fr] md:items-center">
             <div className="flex justify-center md:justify-start">
-              {/* ✅ Crown goes HERE */}
+              {/* Crown goes HERE */}
               <div className="relative inline-block">
                 <img
                   src={user?.photoURL || "https://i.ibb.co/ZxK3f6K/user.png"}
@@ -366,7 +366,7 @@ export default function Profile() {
                   Your public lessons
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-slate-600">
-                  Loaded from MongoDB (newest first).
+                  Loaded from MongoDB .
                 </p>
               </div>
 

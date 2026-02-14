@@ -162,7 +162,8 @@ const FeaturedLessonsCarousel = () => {
                       to="/public-lessons"
                       className="mt-3 inline-flex items-center gap-2 text-sm font-extrabold text-indigo-600 hover:underline"
                     >
-                      Read more <span className="text-base">→</span>
+                      Read more ➡
+                       <span className="text-base">→</span>
                     </Link>
                   </div>
                 </div>

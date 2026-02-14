@@ -14,7 +14,7 @@ import DashboardLayout from "./layouts/DashboardLayout";
 
 import DashboardHome from "./pages/Dashboard/DashboardHome";
 
-// TODO: keep your real pages
+
 import AddLesson from "./pages/Dashboard/AddLesson";
 import MyLessons from "./pages/Dashboard/MyLessons";
 import MyFavorites from "./pages/Dashboard/MyFavorites";

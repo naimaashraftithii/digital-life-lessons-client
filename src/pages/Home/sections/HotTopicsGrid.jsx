@@ -61,7 +61,7 @@ const HotTopicsGrid = () => {
         </div>
 
         <div className="grid gap-5 lg:grid-cols-3">
-          {/* BIG LEFT */}
+          {/* BIG left */}
           <Link
             to="/public-lessons"
             className="group relative overflow-hidden rounded-2xl lg:col-span-2"

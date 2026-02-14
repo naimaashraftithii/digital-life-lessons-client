@@ -83,7 +83,7 @@ export default function ManageUsers() {
         <div>
           <h2 className="text-lg font-extrabold text-slate-900">Manage Users</h2>
           <p className="mt-1 text-sm font-semibold text-slate-600">
-            View all users, promote to admin, and delete (optional).
+            View all users, promote to admin, and delete .
           </p>
         </div>
 

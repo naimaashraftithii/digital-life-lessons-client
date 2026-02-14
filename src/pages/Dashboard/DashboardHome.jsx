@@ -29,7 +29,7 @@ function startOfDay(date) {
 function buildLast7DaysSeries(lessons = []) {
   const today = startOfDay(new Date());
 
-  // last 7 days including today
+  // last 7 days 
   const days = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
@@ -37,7 +37,7 @@ function buildLast7DaysSeries(lessons = []) {
     days.push(d);
   }
 
-  // count lessons by day
+  // count lessons  day
   const counts = new Map();
   for (const l of Array.isArray(lessons) ? lessons : []) {
     const createdAt = l?.createdAt ? new Date(l.createdAt) : null;
@@ -86,9 +86,6 @@ export default function DashboardHome() {
     };
   }, [data]);
 
-  // ✅ IMPORTANT:
-  // Your hook should return recentlyAdded lessons OR myLessons list.
-  // We'll use `data.recentLessons` if available; otherwise fallback to `data.lessons`.
   const sourceLessons = useMemo(() => {
     if (Array.isArray(data?.recentLessons)) return data.recentLessons;
     if (Array.isArray(data?.lessons)) return data.lessons;
@@ -118,7 +115,7 @@ export default function DashboardHome() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900">Dashboard</h1>
           <p className="mt-1 text-sm font-semibold text-slate-600">
-            Welcome back, {user?.displayName || "User"} 👋
+             🟢🟠🔴🟢  Welcome back, {user?.displayName || "User"} 🟢🟠🔴🟢
           </p>
         </div>
 
@@ -174,7 +171,7 @@ export default function DashboardHome() {
   </ResponsiveContainer>
 </div>
 
-        {/* If everything 0 show message */}
+       
         {weeklySeries.every((x) => x.lessons === 0) && (
           <p className="mt-2 text-xs font-semibold text-slate-500">
             No lessons created in the last 7 days.

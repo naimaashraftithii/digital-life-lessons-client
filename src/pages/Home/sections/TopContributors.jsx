@@ -18,13 +18,13 @@ export default function TopContributors() {
         setLoading(true);
         setErr("");
 
-        // 1) last 7 days
+        //  last 7 days
         let data = await getTopContributors(7);
         data = Array.isArray(data) ? data.filter(Boolean) : [];
 
-        // 2) fallback all-time if empty
+        //  fallback all-time 
         if (data.length === 0) {
-          const all = await getTopContributors(0); // days=0 => all-time
+          const all = await getTopContributors(0); 
           data = Array.isArray(all) ? all.filter(Boolean) : [];
           if (!ignore) setLabel("All-time Top Contributors");
         } else {
@@ -49,7 +49,7 @@ export default function TopContributors() {
           <div>
             <h3 className="text-xl font-extrabold text-slate-900">{label}</h3>
             <p className="mt-1 text-sm font-semibold text-slate-600">
-              Based on lessons created in the last 7 days (auto fallback to all-time).
+              Based on lessons created in the last 7 days.
             </p>
           </div>
 
@@ -104,7 +104,7 @@ export default function TopContributors() {
                 <div className="mt-6 rounded-3xl bg-slate-50 p-6 text-center">
                   <p className="text-sm font-extrabold text-slate-900">No contributors yet</p>
                   <p className="mt-1 text-sm font-semibold text-slate-600">
-                    Create lessons to appear here.
+                    Create lessons to appear here 🎯
                   </p>
                 </div>
               )}

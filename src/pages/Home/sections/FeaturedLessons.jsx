@@ -31,14 +31,14 @@ export default function FeaturedLessons() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-extrabold text-slate-900">Featured Life Lessons</h2>
-            <p className="mt-2 text-sm text-slate-600">Selected by admin (Manage Lessons → Featured).</p>
+            <p className="mt-2 text-sm text-slate-600">Selected by➖Admin.</p>
           </div>
 
           <Link
             to="/public-lessons"
             className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-extrabold text-white shadow-sm transition hover:-translate-y-[1px] hover:shadow-md"
           >
-            View all →
+            View all ➡
           </Link>
         </div>
 
@@ -79,7 +79,7 @@ export default function FeaturedLessons() {
                       to={`/lesson/${l?._id}`}
                       className="text-sm font-extrabold text-indigo-700 transition group-hover:underline"
                     >
-                      Details →
+                      Details ➡
                     </Link>
                   </div>
                 </div>

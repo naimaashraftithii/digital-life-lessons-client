@@ -1,4 +1,4 @@
-// src/pages/dashboard/MyFavorites.jsx
+
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -16,13 +16,13 @@ export default function MyFavorites() {
     try {
       setLoading(true);
 
-      // ✅ server returns [{ uid, lessonId, createdAt }]
+      // server returns 
       const favs = await getFavorites(user?.uid);
 
       const favArr = Array.isArray(favs) ? favs : [];
       const lessonIds = favArr.map((f) => f.lessonId).filter(Boolean);
 
-      // ✅ fetch lesson details
+      //  fetch lesson details
       const lessons = await Promise.all(
         lessonIds.map(async (id) => {
           try {
@@ -45,7 +45,7 @@ export default function MyFavorites() {
   useEffect(() => {
     if (!user?.uid) return;
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line 
   }, [user?.uid]);
 
   const onRemove = async (lessonId) => {

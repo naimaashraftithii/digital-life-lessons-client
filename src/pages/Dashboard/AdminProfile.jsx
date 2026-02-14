@@ -26,14 +26,14 @@ export default function AdminProfile() {
       text: "Optional: update Firebase profile. For assignment, UI is enough.",
       confirmButtonText: "Ok",
     });
-    toast.success("Admin profile screen ready ✅");
+    toast.success("🎯 Admin profile screen ready");
   };
 
   return (
     <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
       <h2 className="text-lg font-extrabold text-slate-900">Admin Profile</h2>
       <p className="mt-1 text-sm font-semibold text-slate-600">
-        Manage your admin profile details.
+        Manage  admin profile details.
       </p>
 
       <div className="mt-6 grid gap-5 md:grid-cols-[140px_1fr]">
@@ -44,7 +44,7 @@ export default function AdminProfile() {
             className="h-28 w-28 rounded-3xl object-cover ring-2 ring-slate-100"
           />
           <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-extrabold text-white">
-            Admin ✅
+            Admin 🎯
           </span>
         </div>
 

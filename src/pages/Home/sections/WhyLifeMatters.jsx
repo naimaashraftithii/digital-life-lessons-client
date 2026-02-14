@@ -1,4 +1,4 @@
-// src/pages/Home/sections/WhyLifeMatters.jsx
+
 import { useMemo, useState } from "react";
 
 export default function WhyLifeMatters() {
@@ -9,22 +9,22 @@ export default function WhyLifeMatters() {
       {
         title: "Capture your moments",
         desc: "Turn your everyday experiences into lessons you can revisit anytime.",
-        icon: "📝",
+        icon:"📸",
       },
       {
         title: "Reflect & grow",
         desc: "Track your mindset, learn patterns, and level up your personal journey.",
-        icon: "🌱",
+        icon: "🎨",
       },
       {
         title: "Share wisdom",
         desc: "Help others with your story—your lesson might be someone’s turning point.",
-        icon: "🤝",
+        icon: "🎯"
       },
       {
         title: "Learn from others",
         desc: "Explore public lessons and get inspired by the community.",
-        icon: "✨",
+        icon: "🎭",
       },
     ],
     []
@@ -35,7 +35,7 @@ export default function WhyLifeMatters() {
       <div className="mx-auto max-w-6xl px-4">
         {/* Wrapper */}
         <div className="relative overflow-hidden rounded-3xl bg-white p-6 shadow-sm sm:p-8">
-          {/* Decorative gradient blur */}
+        
           <div className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-indigo-200/50 blur-3xl" />
           <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-fuchsia-200/50 blur-3xl" />
 
@@ -69,7 +69,7 @@ export default function WhyLifeMatters() {
                 </a>
               </div>
 
-              {/* Mini stats (optional, looks dynamic) */}
+              {/* Mini stats */}
               <div className="mt-6 grid grid-cols-3 gap-3">
                 <StatChip label="Create" value="Fast" />
                 <StatChip label="Share" value="Public/Private" />
@@ -80,7 +80,7 @@ export default function WhyLifeMatters() {
             {/* Right media */}
             <div className="relative">
               <div className="group relative overflow-hidden rounded-3xl bg-slate-100 shadow-sm">
-                {/* Replace this image with your own asset */}
+                {/* Replace this image */}
                 <img
                   src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1200&q=70"
                   alt="People learning together"
@@ -91,7 +91,7 @@ export default function WhyLifeMatters() {
                 {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-slate-900/10 to-transparent opacity-90" />
 
-                {/* Floating play button */}
+                {/* play button */}
                 <button
                   onClick={() => setOpenVideo(true)}
                   className="absolute bottom-4 left-4 inline-flex items-center gap-2 rounded-2xl bg-white/80 px-4 py-2 text-sm font-extrabold text-slate-900 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:bg-white hover:shadow-lg"
@@ -105,7 +105,7 @@ export default function WhyLifeMatters() {
               </div>
 
               <p className="mt-3 text-xs font-semibold text-slate-500">
-                Tip: replace the image/video with your own brand assets anytime.
+                🎯 Tip: replace the image/video with your own brand assets anytime.
               </p>
             </div>
           </div>

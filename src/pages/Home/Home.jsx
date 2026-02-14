@@ -12,12 +12,12 @@ export default function Home() {
     <div className="bg-slate-50 w-full">
       <HeroSlider />
 
-      {/* (optional) static slider */}
+      {/* static slider */}
       <FeaturedLessonsCarousel />
 
       <PricingTeaser />
 
-      {/* ✅ dynamic sections, shown only once */}
+      {/*  dynamic sections */}
       <FeaturedLessons />
       <WhyLifeMatters />
 

@@ -1,4 +1,3 @@
-// src/pages/ErrorPage.jsx
 import { Link, useRouteError } from "react-router-dom";
 
 export default function ErrorPage() {

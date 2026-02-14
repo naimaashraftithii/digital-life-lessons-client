@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-/* Tailwind v4 preflight is included automatically by @import "tailwindcss" */
 
 body {
   min-height: 100vh;

@@ -1,4 +1,4 @@
-// src/pages/Dashboard/MyLessons.jsx
+
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -42,7 +42,7 @@ export default function MyLessons() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [user?.uid]);
 
   const onDelete = async (id) => {
@@ -50,7 +50,7 @@ export default function MyLessons() {
     try {
       await deleteLesson(id);
       toast.success("Deleted ✅");
-      await load(); // ✅ refresh
+      await load(); 
     } catch (e) {
       toast.error(e?.message || "Failed to delete");
     }
@@ -128,7 +128,7 @@ export default function MyLessons() {
                     </span>
                     {l.accessLevel === "premium" && !plan?.isPremium && (
                       <div className="text-[11px] font-bold text-rose-600 mt-1">
-                        Premium locked (you are free)
+                        Premium locked 
                       </div>
                     )}
                   </td>

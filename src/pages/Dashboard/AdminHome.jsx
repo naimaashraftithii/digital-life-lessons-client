@@ -1,4 +1,4 @@
-// src/pages/Dashboard/AdminHome.jsx
+
 import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
@@ -84,12 +84,12 @@ export default function AdminHome() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* ✅ Chart */}
+        {/* Chart */}
         <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100 lg:col-span-2">
-          <h3 className="text-lg font-extrabold text-slate-900">Lessons created (last 7 days)</h3>
+          <h3 className="text-lg font-extrabold text-slate-900">Lessons create-last 7 days</h3>
           <p className="mt-1 text-sm font-semibold text-slate-600">Platform-wide activity</p>
 
-          {/* ✅ FIX Recharts width(-1): min-w-0 + explicit height */}
+          {/*  FIX Recharts */}
           <div className="mt-4 w-full min-w-0">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={series} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
@@ -109,7 +109,7 @@ export default function AdminHome() {
           )}
         </div>
 
-        {/* ✅ Top contributors */}
+        {/*  Top contributors */}
         <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
           <h3 className="text-lg font-extrabold text-slate-900">Most active contributors</h3>
           <p className="mt-1 text-sm font-semibold text-slate-600">

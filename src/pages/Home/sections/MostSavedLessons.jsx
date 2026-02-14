@@ -28,7 +28,7 @@ export default function MostSavedLessons() {
     return () => (ignore = true);
   }, []);
 
-  // ✅ backend should return [{ lessonId, saves, lesson: {...} }]
+  //  backend  return
   const safeRows = useMemo(() => (rows || []).filter((r) => r && r.lesson), [rows]);
 
   return (

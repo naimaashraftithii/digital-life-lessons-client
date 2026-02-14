@@ -33,7 +33,7 @@ import PaymentSuccess from "../pages/Payment/PaymentSuccess";
 import PaymentCancel from "../pages/Payment/PaymentCancel";
 
 const router = createBrowserRouter([
-  // PUBLIC + DASHBOARD (same main layout)
+  // PUBLIC & Dashboard
   {
     path: "/",
     element: <MainLayout />,
@@ -46,7 +46,7 @@ const router = createBrowserRouter([
       { path: "payment-success", element: <PrivateRoute><PaymentSuccess /></PrivateRoute> },
       { path: "payment-cancel", element: <PrivateRoute><PaymentCancel /></PrivateRoute> },
 
-      // DASHBOARD (private)
+      // DASHBOARD  & private
       {
         path: "dashboard",
         element: (
@@ -61,7 +61,7 @@ const router = createBrowserRouter([
           { path: "my-favorites", element: <MyFavorites /> },
           { path: "profile", element: <Profile /> },
 
-          // ADMIN (nested)
+          // ADMIN 
           {
             path: "admin",
             element: (
@@ -84,7 +84,7 @@ const router = createBrowserRouter([
     ]
   },
 
-  // AUTH (separate layout)
+  // AUTH 
   {
     path: "/",
     element: <AuthLayout />,

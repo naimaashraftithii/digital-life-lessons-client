@@ -1,4 +1,4 @@
-// src/pages/Dashboard/ManageLessons.jsx
+
 import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import { toast } from "react-toastify";
@@ -34,7 +34,6 @@ export default function ManageLessons() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const filteredCount = useMemo(() => lessons.length, [lessons]);
@@ -169,7 +168,7 @@ export default function ManageLessons() {
                     </p>
                   </td>
 
-                  {/* ✅ FIXED CREATOR CELL */}
+        
                   <td className="py-3 pr-3">
                     <div className="flex items-center gap-2">
                       <img

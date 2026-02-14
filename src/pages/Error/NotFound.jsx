@@ -11,7 +11,7 @@ const NotFound = () => {
       </div>
 
       <h2 className="mt-2 text-2xl font-bold text-slate-900 md:text-3xl">
-        Page not found
+        Page not found.......⚠⚠⚠⚠
       </h2>
 
       <p className="mt-2 text-sm text-slate-600 max-w-md">
